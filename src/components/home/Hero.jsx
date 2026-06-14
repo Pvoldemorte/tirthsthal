@@ -3,7 +3,6 @@ import { FiSearch, FiMapPin, FiChevronDown, FiArrowRight } from "react-icons/fi"
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSearch } from "../../context/SearchContext";
-import { templesData } from "../../data/temple";
 import "../../styles/home/hero.css";
 import SearchBar from "../common/SearchBar";
 import { useTranslation } from "react-i18next";
@@ -24,38 +23,10 @@ export default function Hero() {
 
   const [stateOpen, setStateOpen] = useState(false);
 
-  // Get all states from data
-  const states = ["All States", ...Object.keys(templesData)];
-
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
-
-    // Get temples based on selected state
-    let templeList = [];
-    if (selectedState === "All States") {
-      templeList = Object.values(templesData).flatMap((s) =>
-        Object.values(s).flat()
-      );
-    } else {
-      const stateData = templesData[selectedState] || {};
-      templeList = Object.values(stateData).flat();
-    }
-
-    // Filter by search query
-    const q = searchQuery.toLowerCase();
-    const results = templeList.filter((t) =>
-      t.name.toLowerCase().includes(q)     ||
-      t.deity.toLowerCase().includes(q)    ||
-      t.district.toLowerCase().includes(q) ||
-      t.type.toLowerCase().includes(q)     ||
-      t.description.toLowerCase().includes(q)
-    );
-
-    setSearchResults(results);
     setHasSearched(true);
-
-    // Navigate to temples page with search
-    navigate(`/temples?search=${encodeURIComponent(searchQuery)}&state=${encodeURIComponent(selectedState)}`);
+    navigate(`/temples?search=${encodeURIComponent(searchQuery)}&state=${encodeURIComponent(selectedState || "All States")}`);
   };
 
   const handleKeyPress = (e) => {
@@ -64,21 +35,8 @@ export default function Hero() {
 
   const handlePopularSearch = (tag) => {
     setSearchQuery(tag);
-
-    // Filter temples
-    let templeList = Object.values(templesData).flatMap((s) =>
-      Object.values(s).flat()
-    );
-    const q = tag.toLowerCase();
-    const results = templeList.filter((t) =>
-      t.name.toLowerCase().includes(q)  ||
-      t.deity.toLowerCase().includes(q) ||
-      t.type.toLowerCase().includes(q)
-    );
-    setSearchResults(results);
     setHasSearched(true);
-
-    navigate(`/temples?search=${encodeURIComponent(tag)}&state=All States`);
+    navigate(`/temples?search=${encodeURIComponent(tag)}`);
   };
 
   return (
@@ -87,6 +45,7 @@ export default function Hero() {
         src="https://png.pngtree.com/thumb_back/fh260/background/20251027/pngtree-ornate-hindu-temple-complex-in-golden-sunset-light-image_20057957.webp"
         alt="Temple"
         className="hero__bg"
+        onError={(e) => e.target.src = "https://images.unsplash.com/photo-1548013146-72479768bada?w=1200"}
       />
       <div className="hero__overlay" />
 

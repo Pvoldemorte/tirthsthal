@@ -31,9 +31,7 @@
   cursor: pointer;
   transition: gap 0.2s;
 }
-.deity__view-all:hover {
-  gap: 10px;
-}
+.deity__view-all:hover { gap: 10px; }
 
 /* Grid */
 .deity__grid {
@@ -59,19 +57,51 @@
   box-shadow: 0 4px 16px rgba(200, 97, 10, 0.1);
 }
 
-/* Icon */
+/* Image circle */
 .deity__icon-wrap {
-  width: 52px;
-  height: 52px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  background: #fff6f0;
+  border: 2.5px solid #f0ede8;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #fff6f0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
 }
-.deity__icon {
-  font-size: 26px;
+
+.deity__card:hover .deity__icon-wrap {
+  box-shadow: 0 0 0 4px rgba(200, 97, 10, 0.12);
+}
+
+.deity__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: 50%;
+  transition: transform 0.35s ease;
+  display: block;
+}
+
+.deity__card:hover .deity__img {
+  transform: scale(1.08);
+}
+
+/* "More" fallback */
+.deity__more-icon {
+  font-size: 28px;
+  font-weight: 300;
+  color: #9ca3af;
   line-height: 1;
+}
+
+/* Fallback when image fails */
+.deity__icon-wrap--fallback::after {
+  content: attr(data-fallback);
+  font-size: 26px;
 }
 
 /* Name */
@@ -81,23 +111,16 @@
   color: #1a1a1a;
   text-align: center;
 }
+
+/* Responsive */
 @media (max-width: 768px) {
-  .deity {
-    padding: 24px 16px;
-  }
+  .deity { padding: 24px 16px; }
   .deity__grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
   }
-  .deity__card {
-    padding: 14px 8px;
-    gap: 8px;
-  }
-  .deity__icon-wrap {
-    width: 44px;
-    height: 44px;
-  }
-  .deity__icon { font-size: 22px; }
+  .deity__card { padding: 14px 8px; gap: 8px; }
+  .deity__icon-wrap { width: 56px; height: 56px; }
   .deity__name { font-size: 12px; }
 }
 
@@ -106,7 +129,6 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
-  .deity__icon-wrap { width: 38px; height: 38px; }
-  .deity__icon { font-size: 18px; }
+  .deity__icon-wrap { width: 48px; height: 48px; }
   .deity__name { font-size: 11px; }
 }

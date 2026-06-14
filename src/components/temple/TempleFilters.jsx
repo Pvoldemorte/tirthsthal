@@ -1,95 +1,76 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { FiSearch, FiChevronDown, FiRefreshCw } from "react-icons/fi";
-import { templesData } from "../../data/temple";
-import "../../styles/temple/templeFilters.css";
 import { useSearchParams } from "react-router-dom";
+import "../../styles/temple/templeFilters.css";
+
 const deityFilters = [
-  { name: "Shiva",   count: 1200 },
-  { name: "Vishnu",  count: 980  },
-  { name: "Devi",    count: 1106 },
-  { name: "Ganesh",  count: 742  },
-  { name: "Hanuman", count: 640  },
+  { name: "Shiva"   },
+  { name: "Vishnu"  },
+  { name: "Devi"    },
+  { name: "Ganesh"  },
+  { name: "Hanuman" },
+  { name: "Brahma"  },
+  { name: "Krishna" },
 ];
 
-const stateOptions = ["All States", ...Object.keys(templesData)];
-
-const sortOptions = [
-  "Popularity", "Name A-Z", "Name Z-A", "Rating", "Most Visited",
+const indianStates = [
+  "All States",
+  "Andhra Pradesh","Assam","Bihar","Chhattisgarh","Delhi","Goa","Gujarat",
+  "Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
+  "Madhya Pradesh","Maharashtra","Odisha","Punjab","Rajasthan",
+  "Tamil Nadu","Telangana","Uttar Pradesh","Uttarakhand","West Bengal",
 ];
+
+const sortOptions = ["Popularity", "Name A-Z", "Name Z-A", "Rating", "Most Visited"];
 
 export default function TempleFilters({ onFilterChange }) {
-  const [search,           setSearch]           = useState("");
-  const [selectedState,    setSelectedState]    = useState("All States");
-  const [stateOpen,        setStateOpen]        = useState(false);
-  const [selectedDeities,  setSelectedDeities]  = useState([]);
-  const [showMoreDeities,  setShowMoreDeities]  = useState(false);
-  const [selectedDistrict, setSelectedDistrict] = useState("All Districts");
-  const [districtOpen,     setDistrictOpen]     = useState(false);
-  const [selectedSort,     setSelectedSort]     = useState("Popularity");
-  const [sortOpen,         setSortOpen]         = useState(false);
+  const [searchParams] = useSearchParams();
 
-  // ✅ Dynamic district options based on selected state
-  const districtOptions = useMemo(() => {
-    if (selectedState === "All States") {
-      const all = new Set();
-      Object.values(templesData).forEach((stateData) => {
-        Object.keys(stateData).forEach((d) => all.add(d));
-      });
-      return ["All Districts", ...all];
-    }
-    const stateData = templesData[selectedState] || {};
-    return ["All Districts", ...Object.keys(stateData)];
-  }, [selectedState]);
+  const [search,          setSearch]          = useState(searchParams.get("search") || "");
+  const [selectedState,   setSelectedState]   = useState(searchParams.get("state")  || "All States");
+  const [stateOpen,       setStateOpen]       = useState(false);
+  const [selectedDeities, setSelectedDeities] = useState(
+    searchParams.get("deity") ? [searchParams.get("deity")] : []
+  );
+  const [showMoreDeities, setShowMoreDeities] = useState(false);
+  const [selectedSort,    setSelectedSort]    = useState("Popularity");
+  const [sortOpen,        setSortOpen]        = useState(false);
+
+  const emit = (overrides = {}) => {
+    onFilterChange?.({
+      search, deities: selectedDeities,
+      state: selectedState, sort: selectedSort,
+      ...overrides,
+    });
+  };
 
   const toggleDeity = (name) => {
     const updated = selectedDeities.includes(name)
       ? selectedDeities.filter((d) => d !== name)
       : [...selectedDeities, name];
     setSelectedDeities(updated);
-    onFilterChange?.({ search, deities: updated, state: selectedState, district: selectedDistrict, sort: selectedSort });
+    emit({ deities: updated });
   };
 
-  const handleSearch = (val) => {
-    setSearch(val);
-    onFilterChange?.({ search: val, deities: selectedDeities, state: selectedState, district: selectedDistrict, sort: selectedSort });
-  };
-
-  const handleState = (val) => {
-    setSelectedState(val);
-    setStateOpen(false);
-    setSelectedDistrict("All Districts"); // ✅ reset district
-    onFilterChange?.({ search, deities: selectedDeities, state: val, district: "All Districts", sort: selectedSort });
-  };
-
-  const handleDistrict = (val) => {
-    setSelectedDistrict(val);
-    setDistrictOpen(false);
-    onFilterChange?.({ search, deities: selectedDeities, state: selectedState, district: val, sort: selectedSort });
-  };
-
-  const handleSort = (val) => {
-    setSelectedSort(val);
-    setSortOpen(false);
-    onFilterChange?.({ search, deities: selectedDeities, state: selectedState, district: selectedDistrict, sort: val });
-  };
+  const handleSearch  = (val) => { setSearch(val);         emit({ search: val }); };
+  const handleState   = (val) => { setSelectedState(val);  setStateOpen(false);  emit({ state: val }); };
+  const handleSort    = (val) => { setSelectedSort(val);   setSortOpen(false);   emit({ sort: val }); };
 
   const clearFilters = () => {
-    setSearch("");
-    setSelectedDeities([]);
-    setSelectedState("All States");
-    setSelectedDistrict("All Districts");
-    setSelectedSort("Popularity");
-    onFilterChange?.({ search: "", deities: [], state: "All States", district: "All Districts", sort: "Popularity" });
+    setSearch(""); setSelectedDeities([]);
+    setSelectedState("All States"); setSelectedSort("Popularity");
+    onFilterChange?.({
+      search: "", deities: [], state: "All States", sort: "Popularity",
+    });
   };
 
   const visibleDeities = showMoreDeities ? deityFilters : deityFilters.slice(0, 5);
 
   return (
     <aside className="tfilter">
-
       <h3 className="tfilter__title">Filters</h3>
 
-      {/* ── Search ── */}
+      {/* Search */}
       <div className="tfilter__section">
         <p className="tfilter__label">Search Temples</p>
         <div className="tfilter__search">
@@ -104,7 +85,7 @@ export default function TempleFilters({ onFilterChange }) {
         </div>
       </div>
 
-      {/* ── Deity ── */}
+      {/* Deity */}
       <div className="tfilter__section">
         <p className="tfilter__label">Deity</p>
         <div className="tfilter__deity-list">
@@ -117,7 +98,6 @@ export default function TempleFilters({ onFilterChange }) {
                 onChange={() => toggleDeity(deity.name)}
               />
               <span className="tfilter__check-name">{deity.name}</span>
-              <span className="tfilter__check-count">({deity.count.toLocaleString()})</span>
             </label>
           ))}
         </div>
@@ -129,7 +109,7 @@ export default function TempleFilters({ onFilterChange }) {
         </button>
       </div>
 
-      {/* ── State ── */}
+      {/* State */}
       <div className="tfilter__section">
         <p className="tfilter__label">State</p>
         <div className="tfilter__dropdown" onClick={() => setStateOpen(!stateOpen)}>
@@ -137,7 +117,7 @@ export default function TempleFilters({ onFilterChange }) {
           <FiChevronDown size={14} className={`tfilter__dropdown-arrow ${stateOpen ? "open" : ""}`} />
           {stateOpen && (
             <ul className="tfilter__dropdown-list">
-              {stateOptions.map((s) => (
+              {indianStates.map((s) => (
                 <li
                   key={s}
                   className={selectedState === s ? "selected" : ""}
@@ -151,29 +131,7 @@ export default function TempleFilters({ onFilterChange }) {
         </div>
       </div>
 
-      {/* ── District ── */}
-      <div className="tfilter__section">
-        <p className="tfilter__label">District</p>
-        <div className="tfilter__dropdown" onClick={() => setDistrictOpen(!districtOpen)}>
-          <span>{selectedDistrict}</span>
-          <FiChevronDown size={14} className={`tfilter__dropdown-arrow ${districtOpen ? "open" : ""}`} />
-          {districtOpen && (
-            <ul className="tfilter__dropdown-list">
-              {districtOptions.map((d) => (
-                <li
-                  key={d}
-                  className={selectedDistrict === d ? "selected" : ""}
-                  onClick={(e) => { e.stopPropagation(); handleDistrict(d); }}
-                >
-                  {d}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      {/* ── Sort By ── */}
+      {/* Sort */}
       <div className="tfilter__section">
         <p className="tfilter__label">Sort By</p>
         <div className="tfilter__dropdown" onClick={() => setSortOpen(!sortOpen)}>
@@ -195,12 +153,10 @@ export default function TempleFilters({ onFilterChange }) {
         </div>
       </div>
 
-      {/* ── Clear Filters ── */}
+      {/* Clear */}
       <button className="tfilter__clear" onClick={clearFilters}>
-        <FiRefreshCw size={14} />
-        Clear Filters
+        <FiRefreshCw size={14} /> Clear Filters
       </button>
-
     </aside>
   );
 }

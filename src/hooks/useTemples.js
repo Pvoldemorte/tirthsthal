@@ -12,6 +12,7 @@ export const useTemples = (initialFilters = {}) => {
   const [filters,    setFilters]    = useState(initialFilters);
 
   const fetchTemples = useCallback(async () => {
+    console.log("Filters:", filters);
     try {
       setLoading(true);
       setError(null);

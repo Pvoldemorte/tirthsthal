@@ -57,6 +57,21 @@ export default function Stats() {
     { icon: "👥", value: 10, suffix: "L+", label: t("stats.devotees") },
   ];
 
+  useEffect(() => {
+    const fetchPopular = async () => {
+      try {
+        const data = await getTemples({ sort: "Rating", limit: 6 });
+        setTemples(data.temples || []);
+      } catch (err) {
+        console.error("Failed to load popular temples:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPopular();
+  }, []);
+
+
   return (
     <section className="stats">
       {stats.map((stat, i) => (
