@@ -1,30 +1,37 @@
 import { motion } from "framer-motion";
 import { FiArrowRight, FiMapPin } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { useState , useEffect } from "react";
-import { districts } from "../../data/districts";
+import { useState, useEffect } from "react";
+import { getDistricts } from "../../services/contentService";
 import "../../styles/home/districtExplore.css";
-import API from "../../services/api"
+
 export default function DistrictExplore() {
-
-
+  const [districts, setDistricts] = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [visibleCards, setVisibleCards] = useState(8);
 
-  const [district, setDistrict] = useState([]);
-
   useEffect(() => {
-    const fetchDistricts = async () => {
-      try {
-        const res = await API.get("/districts");
-        setDistrict(res.data.districts);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchDistricts();
+    getDistricts()
+      .then((list) => setDistricts(list || []))
+      .catch((err) => {
+        console.error("Failed to load districts:", err);
+        setDistricts([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
+  if (loading) {
+    return (
+      <section className="district">
+        <div className="district__header">
+          <h2 className="district__title">Explore by District</h2>
+        </div>
+        <p style={{ padding: "20px 0" }}>Loading districts...</p>
+      </section>
+    );
+  }
+
+  if (districts.length === 0) return null;
 
   return (
     <section className="district">
@@ -39,9 +46,9 @@ export default function DistrictExplore() {
 
       {/* ── Grid ── */}
       <div className="district__grid">
-        {district.slice(0, visibleCards).map((district, i) => (
+        {districts.slice(0, visibleCards).map((district, i) => (
           <motion.div
-            key={district.name}
+            key={district._id}
             className="district__card"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -51,16 +58,12 @@ export default function DistrictExplore() {
           >
             <Link to={`/districts/${district.slug}`} className="district__card-link">
               <div className="district__img-wrap">
-                  {
-                district.images.map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt={district.name}
-                    className="popular__img"
-                  />
-                )) 
-              }
+                <img
+                  src={district.image || "/images/placeholder-temple.jpg"}
+                  alt={district.name}
+                  className="district__img"
+                  onError={(e) => { e.target.src = "/images/placeholder-temple.jpg"; }}
+                />
                 <div className="district__overlay" />
                 <div className="district__text">
                   <span className="district__name">
@@ -68,7 +71,7 @@ export default function DistrictExplore() {
                     {district.name}
                   </span>
                   <span className="district__count">
-                    {district.templeCount} Temples
+                    {district.templeCount || 0} Temples
                   </span>
                 </div>
               </div>
@@ -78,7 +81,7 @@ export default function DistrictExplore() {
       </div>
 
       {/* Load More */}
-      {visibleCards < district.length && (
+      {visibleCards < districts.length && (
         <div className="district__load-more">
           <button onClick={() => setVisibleCards((prev) => prev + 8)}>
             Load More Districts <FiArrowRight size={14} />

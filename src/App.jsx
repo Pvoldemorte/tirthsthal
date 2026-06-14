@@ -20,6 +20,7 @@ import Signup from "./pages/auth/signup";
 import Profile from "./pages/auth/myprofile"
 import ForgotPassword from "./pages/auth/forgotPassword";
 import ResetPassword  from "./pages/auth/reset-password";
+import FestivalDetail from "./pages/festivals/[festival]";
 export default function App() {
   return (
     <Router>
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/profile"             element={<Profile/>}    />
         <Route path="/auth/forgot"                    element={<ForgotPassword />} />
         <Route path="/auth/reset-password/:token"     element={<ResetPassword />}  /> 
+        <Route path="/festivals/:festival" element={<FestivalDetail />} />
       </Routes>
       <Footer />
     </Router>

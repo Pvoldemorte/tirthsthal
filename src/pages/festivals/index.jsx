@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   FiSearch, FiCalendar, FiMapPin, FiHeart,
   FiChevronDown, FiRefreshCw, FiArrowRight, FiChevronRight
 } from "react-icons/fi";
-import { festivals } from "../../data/festivals";
+import { useFavorites } from "../../context/FavoritesContext";
+import { getFestivals, getUpcomingFestivals } from "../../services/contentService";
 import "../../styles/pages/festivals.css";
 
 const months = [
@@ -16,12 +17,6 @@ const states = ["All States","Madhya Pradesh","Maharashtra","Rajasthan","Uttar P
 const types  = [
   "All Types","National Festival","Regional Festival",
   "Cultural Festival","Major Pilgrimage Mela","Monthly Observance","State Festival"
-];
-
-const upcomingList = [
-  { month:"MAY", day:"25", name:"Char Dham Yatra Begins", location:"Uttarakhand",  days:5  },
-  { month:"JUN", day:"07", name:"Jagannath Rath Yatra",   location:"Puri, Odisha", days:18 },
-  { month:"JUL", day:"21", name:"Shravan Somvar Begins",  location:"Across India", days:62 },
 ];
 
 const guideItems = [
@@ -53,6 +48,10 @@ function Dropdown({ value, options, open, setOpen, onSelect }) {
 }
 
 export default function Festivals() {
+  const [festivals, setFestivals] = useState([]);
+  const [upcoming,  setUpcoming]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+
   const [search,    setSearch]    = useState("");
   const [selMonth,  setSelMonth]  = useState("All Months");
   const [selState,  setSelState]  = useState("All States");
@@ -60,19 +59,54 @@ export default function Festivals() {
   const [monthOpen, setMonthOpen] = useState(false);
   const [stateOpen, setStateOpen] = useState(false);
   const [typeOpen,  setTypeOpen]  = useState(false);
-  const [favorites, setFavorites] = useState([]);
   const [visible,   setVisible]   = useState(8);
 
-  const toggleFav = (id) =>
-    setFavorites((p) => p.includes(id) ? p.filter((f) => f !== id) : [...p, id]);
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  // ── Fetch festivals from backend ──
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true);
+      try {
+        const params = {};
+        if (selMonth !== "All Months") params.month = selMonth;
+        if (selState !== "All States") params.state = selState;
+        if (selType  !== "All Types")  params.type  = selType;
+
+        const data = await getFestivals(params);
+        setFestivals(data.festivals || []);
+      } catch (err) {
+        console.error("Failed to load festivals:", err);
+        setFestivals([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+  }, [selMonth, selState, selType]);
+
+  // ── Fetch upcoming festivals (sidebar) ──
+  useEffect(() => {
+    getUpcomingFestivals()
+      .then((list) => setUpcoming(list || []))
+      .catch(() => setUpcoming([]));
+  }, []);
+
+  const toggleFav = (e, f) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite({
+      id: f._id, name: f.name, image: f.image,
+      location: f.location, deityColor: f.deityColor,
+      slug: f.slug, type: "festival",
+    });
+  };
 
   const filtered = festivals.filter((f) => {
-    const q   = search.toLowerCase();
-    const ms  = f.name.toLowerCase().includes(q) || f.location.toLowerCase().includes(q);
-    const mm  = selMonth === "All Months" || f.month.toLowerCase().includes(selMonth.toLowerCase());
-    const mt  = selType  === "All Types"  || f.type  === selType;
-    const mst = selState === "All States" || f.state === selState;
-    return ms && mm && mt && mst;
+    const q = search.toLowerCase();
+    return !q ||
+      f.name?.toLowerCase().includes(q) ||
+      f.location?.toLowerCase().includes(q);
   });
 
   const reset = () => {
@@ -92,7 +126,7 @@ export default function Festivals() {
 
       {/* ── Hero Header ── */}
       <div className="fest-page__hero">
-          <img src="/images/hero-temples.jpeg" class="dist-main__hero-bg" alt="Festivals"
+          <img src="/images/hero-temples.jpeg" className="dist-main__hero-bg" alt="Festivals"
             onError={(e) => e.target.style.display = "none"} />
             <div className="dist-main__hero-overlay" />
         <div className="fest-page__hero-left">
@@ -127,7 +161,6 @@ export default function Festivals() {
           value={selType} options={types}
           open={typeOpen} setOpen={setTypeOpen} onSelect={setSelType}
         />
-        <button className="fest-filter__apply-btn">Apply Filters</button>
         <button className="fest-filter__reset-btn" onClick={reset}>
           <FiRefreshCw size={13} /> Reset
         </button>
@@ -141,67 +174,76 @@ export default function Festivals() {
 
           {/* Section Header */}
           <div className="fest-page__section-header">
-            <h2 className="fest-page__section-title">Popular Festivals</h2>
-            <button className="fest-page__view-all">
-              View All Festivals <FiArrowRight size={14} />
-            </button>
+            <h2 className="fest-page__section-title">
+              {loading ? "Loading..." : `${filtered.length} Festivals Found`}
+            </h2>
           </div>
 
           {/* Festival Grid */}
-          <div className="fest-grid">
-            {filtered.slice(0, visible).map((f, i) => (
-              <motion.div
-                key={f.id}
-                className="fest-card"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.35, delay: i * 0.05 }}
-                whileHover={{ y: -4 }}
-              >
-                {/* Image */}
-                <div className="fest-card__img-wrap">
-                  <img
-                    src={f.image}
-                    alt={f.name}
-                    className="fest-card__img"
-                    onError={(e) => { e.target.src = "/images/placeholder-temple.jpg"; }}
-                  />
-                  <span className="fest-card__month-badge">{f.month}</span>
-                  <button
-                    className={`fest-card__fav ${favorites.includes(f.id) ? "active" : ""}`}
-                    onClick={() => toggleFav(f.id)}
+          {!loading && filtered.length === 0 ? (
+            <div className="fest-page__empty">
+              <p>No festivals found matching your filters.</p>
+              <button onClick={reset}>Clear Filters</button>
+            </div>
+          ) : (
+            <div className="fest-grid">
+              {filtered.slice(0, visible).map((f, i) => (
+                <Link to={`/festivals/${f.slug}`} key={f._id} style={{ textDecoration: "none", color: "inherit" }}>
+                  <motion.div
+                    className="fest-card"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: i * 0.05 }}
+                    whileHover={{ y: -4 }}
                   >
-                    <FiHeart size={14} />
-                  </button>
-                </div>
+                    {/* Image */}
+                    <div className="fest-card__img-wrap">
+                      <img
+                        src={f.image || "/images/placeholder-temple.jpg"}
+                        alt={f.name}
+                        className="fest-card__img"
+                        onError={(e) => { e.target.src = "/images/placeholder-temple.jpg"; }}
+                      />
+                      <span className="fest-card__month-badge">{f.month}</span>
+                      <button
+                        className={`fest-card__fav ${isFavorite(f._id) ? "active" : ""}`}
+                        onClick={(e) => toggleFav(e, f)}
+                      >
+                        <FiHeart size={14} />
+                      </button>
+                    </div>
 
-                {/* Info */}
-                <div className="fest-card__info">
-                  <div className="fest-card__top-row">
-                    <span className="fest-card__deity-icon">🪔</span>
-                    <h3 className="fest-card__name">{f.name}</h3>
-                  </div>
-                  <div className="fest-card__location">
-                    <FiMapPin size={11} />
-                    <span>{f.location}</span>
-                  </div>
-                  <div className="fest-card__bottom">
-                    <span className="fest-card__date">
-                      <FiCalendar size={11} />
-                      {f.month}
-                    </span>
-                    <span
-                      className="fest-card__type-badge"
-                      style={{ background: `${f.deityColor}18`, color: f.deityColor }}
-                    >
-                      {f.type.split(" ").pop()}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                    {/* Info */}
+                    <div className="fest-card__info">
+                      <div className="fest-card__top-row">
+                        <span className="fest-card__deity-icon">🪔</span>
+                        <h3 className="fest-card__name">{f.name}</h3>
+                      </div>
+                      <div className="fest-card__location">
+                        <FiMapPin size={11} />
+                        <span>{f.location}</span>
+                      </div>
+                      <div className="fest-card__bottom">
+                        <span className="fest-card__date">
+                          <FiCalendar size={11} />
+                          {f.month}
+                        </span>
+                        {f.type && (
+                          <span
+                            className="fest-card__type-badge"
+                            style={{ background: `${f.deityColor || "#f4a261"}18`, color: f.deityColor || "#f4a261" }}
+                          >
+                            {f.type.split(" ").pop()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+          )}
 
           {/* Load More */}
           {visible < filtered.length && (
@@ -220,26 +262,30 @@ export default function Festivals() {
           <div className="fest-sidebar__box">
             <div className="fest-sidebar__box-header">
               <h3>Upcoming Festivals</h3>
-              <button className="fest-sidebar__view-cal">
-                View Calendar <FiArrowRight size={13} />
-              </button>
             </div>
             <div className="fest-sidebar__upcoming-list">
-              {upcomingList.map((u, i) => (
-                <div key={i} className="fest-sidebar__upcoming-item">
-                  <div className="fest-sidebar__date-box">
-                    <span className="fest-sidebar__date-month">{u.month}</span>
-                    <span className="fest-sidebar__date-day">{u.day}</span>
-                  </div>
-                  <div className="fest-sidebar__upcoming-info">
-                    <p className="fest-sidebar__upcoming-name">{u.name}</p>
-                    <p className="fest-sidebar__upcoming-loc">{u.location}</p>
-                    <p className="fest-sidebar__upcoming-days">
-                      Starts in {u.days} days
-                    </p>
-                  </div>
-                </div>
-              ))}
+              {upcoming.length === 0 && <p style={{ fontSize: 13, color: "#888" }}>No upcoming festivals.</p>}
+              {upcoming.map((u) => {
+                const d = u.upcomingDate ? new Date(u.upcomingDate) : null;
+                const monthLabel = d ? d.toLocaleString("default", { month: "short" }).toUpperCase() : "";
+                const dayLabel = d ? d.getDate() : "";
+                const daysLeft = d ? Math.max(0, Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24))) : null;
+                return (
+                  <Link to={`/festivals/${u.slug}`} key={u._id} className="fest-sidebar__upcoming-item" style={{ textDecoration: "none", color: "inherit" }}>
+                    <div className="fest-sidebar__date-box">
+                      <span className="fest-sidebar__date-month">{monthLabel}</span>
+                      <span className="fest-sidebar__date-day">{dayLabel}</span>
+                    </div>
+                    <div className="fest-sidebar__upcoming-info">
+                      <p className="fest-sidebar__upcoming-name">{u.name}</p>
+                      <p className="fest-sidebar__upcoming-loc">{u.location}</p>
+                      {daysLeft !== null && (
+                        <p className="fest-sidebar__upcoming-days">Starts in {daysLeft} days</p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
 

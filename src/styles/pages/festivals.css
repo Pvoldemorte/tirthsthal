@@ -493,3 +493,19 @@
     rgba(20, 8, 0, 0.0) 100%
   );
 }
+
+
+
+.fest-page__empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+.fest-page__empty button {
+  margin-top: 12px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+}

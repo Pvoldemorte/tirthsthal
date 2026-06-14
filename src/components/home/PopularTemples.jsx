@@ -1,95 +1,75 @@
-import { useState,useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiArrowRight, FiMapPin, FiHeart } from "react-icons/fi";
+import { useFavorites } from "../../context/FavoritesContext";
+import { getTemples } from "../../services/templeService";
 import "../../styles/home/popularTemples.css";
-import API from "../../services/api";
-
-
-// const temples = [
-//   {
-//     id: 1,
-//     name: "Trimbakeshwar Temple",
-//     city: "Nashik",
-//     deity: "Shiva",
-//     deityColor: "#3b82f6",
-//     image: "/images/trimbakeshwar.jpg",
-//   },
-//   {
-//     id: 2,
-//     name: "Shri Vitthal Rukmini Temple",
-//     city: "Pandharpur, Solapur",
-//     deity: "Vishnu",
-//     deityColor: "#8b5cf6",
-//     image: "/images/vitthal.jpg",
-//   },
-//   {
-//     id: 3,
-//     name: "Mahakaleshwar Temple",
-//     city: "Ujjain",
-//     deity: "Shiva",
-//     deityColor: "#3b82f6",
-//     image: "/images/mahakaleshwar.jpg",
-//   },
-//   {
-//     id: 4,
-//     name: "Shirdi Sai Baba Temple",
-//     city: "Shirdi, Ahmednagar",
-//     deity: "Sai Baba",
-//     deityColor: "#f59e0b",
-//     image: "/images/shrdi.jpg",
-//   },
-//   {
-//     id: 5,
-//     name: "Siddhivinayak Temple",
-//     city: "Mumbai",
-//     deity: "Ganesh",
-//     deityColor: "#10b981",
-//     image: "/images/Siddhivinayak Temple.jpg",
-//   },
-// ];
 
 export default function PopularTemples() {
-  const [favorites, setFavorites] = useState([]);
-
-  const toggleFav = (id) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
-    );
-  };
-
- const [temples, setTemples] = useState([]);
+  const [temples, setTemples] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   useEffect(() => {
-    const fetchTemples = async () => {
+    const fetchPopular = async () => {
       try {
-        const res = await API.get("/temples");
-        setTemples(res.data.temples);
-      } catch (error) {
-        console.error(error);
+        const data = await getTemples({ sort: "Rating", limit: 6 });
+        setTemples(data.temples || []);
+      } catch (err) {
+        console.error("Failed to load popular temples:", err);
+      } finally {
+        setLoading(false);
       }
     };
-
-    fetchTemples();
+    fetchPopular();
   }, []);
 
+  const handleFav = (e, temple) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite({
+      id:         temple._id,
+      name:       temple.name,
+      image:      temple.images?.[0] || "/images/placeholder-temple.jpg",
+      location:   `${temple.district}, ${temple.state}`,
+      deity:      temple.deity,
+      deityColor: temple.deityColor,
+      rating:     temple.rating,
+      slug:       temple.slug,
+      type:       "temple",
+    });
+  };
 
-console.log(temples);
+  if (loading) {
+    return (
+      <section className="popular">
+        <div className="popular__header">
+          <h2 className="popular__title">Popular Temples</h2>
+        </div>
+        <p style={{ padding: "20px 0" }}>Loading temples...</p>
+      </section>
+    );
+  }
+
+  if (temples.length === 0) return null;
+
   return (
     <section className="popular">
 
       {/* ── Header ── */}
       <div className="popular__header">
         <h2 className="popular__title">Popular Temples</h2>
-        <button className="popular__view-all">
+        <Link to="/temples" className="popular__view-all">
           View All Temples <FiArrowRight size={15} />
-        </button>
+        </Link>
       </div>
 
       {/* ── Cards ── */}
       <div className="popular__grid">
         {temples.map((temple, i) => (
           <motion.div
-            key={temple.id}
+            key={temple._id}
             className="popular__card"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -97,56 +77,44 @@ console.log(temples);
             transition={{ duration: 0.4, delay: i * 0.08 }}
             whileHover={{ y: -5 }}
           >
-            {/* Image */}
-            <div className="popular__img-wrap">
-              {
-                temple.images.map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt={temple.name}
-                    className="popular__img"
-                  />
-                )) 
-              }
-              {/* <img
-                src={temple.image[0]}
-                alt={temple.name}
-                className="popular__img"
-              /> */}
+            <Link to={`/temples/${temple.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
+              {/* Image */}
+              <div className="popular__img-wrap">
+                <img
+                  src={temple.images?.[0] || "/images/placeholder-temple.jpg"}
+                  alt={temple.name}
+                  className="popular__img"
+                  onError={(e) => { e.target.src = "/images/placeholder-temple.jpg"; }}
+                />
 
-              {/* Favorite Button */}
-              <button
-                className={`popular__fav ${favorites.includes(temple.id) ? "active" : ""}`}
-                onClick={() => toggleFav(temple.id)}
-              >
-                <FiHeart size={15} />
-              </button>
-            </div>
-
-            {/* Info */}
-            <div className="popular__info">
-              <h3 className="popular__name">{temple.name}</h3>
-              <div className="popular__bottom">
-                <span className="popular__city">
-                  <FiMapPin size={12} />
-                  {temple.city}
-                </span>
-                <span
-                  className="popular__deity"
-                  style={{ background: `${temple.deityColor}18`, color: temple.deityColor }}
+                {/* Favorite Button */}
+                <button
+                  className={`popular__fav ${isFavorite(temple._id) ? "active" : ""}`}
+                  onClick={(e) => handleFav(e, temple)}
                 >
-                  {temple.deity}
-                </span>
+                  <FiHeart size={15} />
+                </button>
               </div>
-            </div>
+
+              {/* Info */}
+              <div className="popular__info">
+                <h3 className="popular__name">{temple.name}</h3>
+                <div className="popular__bottom">
+                  <span className="popular__city">
+                    <FiMapPin size={12} />
+                    {temple.city || temple.district}
+                  </span>
+                  <span
+                    className="popular__deity"
+                    style={{ background: `${temple.deityColor || "#f4a261"}18`, color: temple.deityColor || "#f4a261" }}
+                  >
+                    {temple.deity?.replace("Lord ", "").replace("Goddess ", "")}
+                  </span>
+                </div>
+              </div>
+            </Link>
           </motion.div>
         ))}
-
-        {/* Next Arrow */}
-        <button className="popular__arrow">
-          <FiArrowRight size={20} />
-        </button>
       </div>
 
     </section>

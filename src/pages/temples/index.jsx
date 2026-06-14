@@ -1,19 +1,19 @@
-import { useState, useMemo, useEffect } from "react";
+ 
+
+import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams }        from "react-router-dom";
 import { FiHome, FiChevronRight, FiFilter, FiX } from "react-icons/fi";
 import { motion, AnimatePresence }      from "framer-motion";
 import TempleFilters                    from "../../components/temple/TempleFilters";
 import TempleCard                       from "../../components/temple/TempleCard";
-import { templesData }                  from "../../data/temple";
+import { useTemples }                   from "../../hooks/useTemples";
 import "../../styles/pages/temples.css";
-
-const ITEMS_PER_PAGE = 12;
 
 export default function Temples() {
   const [searchParams]  = useSearchParams();
-  const [currentPage,   setCurrentPage]  = useState(1);
   const [filterOpen,    setFilterOpen]   = useState(false);
-  const [filters,       setFilters]      = useState({
+
+  const [filters, setFilters] = useState({
     search:   searchParams.get("search")   || "",
     state:    searchParams.get("state")    || "All States",
     district: searchParams.get("district") || "All Districts",
@@ -21,15 +21,37 @@ export default function Temples() {
     sort: "Popularity",
   });
 
+  // ── Real data from backend (MongoDB) ──
+  const {
+    temples, total, page, totalPages,
+    loading, error, setPage, updateFilters,
+  } = useTemples({
+    search:   filters.search,
+    state:    filters.state    !== "All States"    ? filters.state    : undefined,
+    district: filters.district !== "All Districts" ? filters.district : undefined,
+    deity:    filters.deities[0] || undefined,
+    type:     searchParams.get("type") || undefined,
+    sort:     filters.sort,
+  });
+
   useEffect(() => {
-    setFilters({
+    const newFilters = {
       search:   searchParams.get("search")   || "",
       state:    searchParams.get("state")    || "All States",
       district: searchParams.get("district") || "All Districts",
       deities:  searchParams.get("deity") ? [searchParams.get("deity")] : [],
       sort: "Popularity",
+    };
+    setFilters(newFilters);
+    updateFilters({
+      search:   newFilters.search,
+      state:    newFilters.state    !== "All States"    ? newFilters.state    : undefined,
+      district: newFilters.district !== "All Districts" ? newFilters.district : undefined,
+      deity:    newFilters.deities[0] || undefined,
+      type:     searchParams.get("type") || undefined,
+      sort:     newFilters.sort,
     });
-    setCurrentPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // lock scroll when filter open on mobile
@@ -38,50 +60,22 @@ export default function Temples() {
     return () => { document.body.style.overflow = ""; };
   }, [filterOpen]);
 
-  const allTemples = useMemo(() => {
-    return Object.keys(templesData).flatMap((state) =>
-      Object.values(templesData[state]).flat()
-    );
-  }, []);
-
-  const filtered = useMemo(() => {
-    let list = [...allTemples];
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      list = list.filter((t) =>
-        t.name.toLowerCase().includes(q)     ||
-        t.deity.toLowerCase().includes(q)    ||
-        t.district.toLowerCase().includes(q) ||
-        t.type?.toLowerCase().includes(q)    ||
-        t.state.toLowerCase().includes(q)
-      );
-    }
-    if (filters.state && filters.state !== "All States")
-      list = list.filter((t) => t.state === filters.state);
-    if (filters.deities?.length > 0)
-      list = list.filter((t) =>
-        filters.deities.some((d) => t.deity.toLowerCase().includes(d.toLowerCase()))
-      );
-    if (filters.district && filters.district !== "All Districts")
-      list = list.filter((t) => t.district === filters.district);
-    const typeParam = searchParams.get("type");
-    if (typeParam)
-      list = list.filter((t) => t.type?.toLowerCase().includes(typeParam.toLowerCase()));
-    if (filters.sort === "Name A-Z") list.sort((a, b) => a.name.localeCompare(b.name));
-    if (filters.sort === "Name Z-A") list.sort((a, b) => b.name.localeCompare(a.name));
-    if (filters.sort === "Rating")   list.sort((a, b) => b.rating - a.rating);
-    return list;
-  }, [filters, allTemples, searchParams]);
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated  = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    setCurrentPage(1);
+    updateFilters({
+      search:   newFilters.search,
+      state:    newFilters.state    !== "All States"    ? newFilters.state    : undefined,
+      district: newFilters.district !== "All Districts" ? newFilters.district : undefined,
+      deity:    newFilters.deities[0] || undefined,
+      sort:     newFilters.sort,
+    });
+  };
+
+  const clearFilters = () => {
+    handleFilterChange({
+      search: "", deities: [], state: "All States",
+      district: "All Districts", sort: "Popularity",
+    });
   };
 
   const getPageNumbers = () => {
@@ -90,9 +84,9 @@ export default function Temples() {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       pages.push(1, 2);
-      if (currentPage > 3) pages.push("...");
-      if (currentPage > 2 && currentPage < totalPages - 1) pages.push(currentPage);
-      if (currentPage < totalPages - 2) pages.push("...");
+      if (page > 3) pages.push("...");
+      if (page > 2 && page < totalPages - 1) pages.push(page);
+      if (page < totalPages - 2) pages.push("...");
       pages.push(totalPages - 1, totalPages);
     }
     return pages;
@@ -103,6 +97,8 @@ export default function Temples() {
     filters.deities.length +
     (filters.state !== "All States" ? 1 : 0) +
     (filters.district !== "All Districts" ? 1 : 0);
+
+  const ITEMS_PER_PAGE = 12;
 
   return (
     <div className="temples-page">
@@ -122,12 +118,12 @@ export default function Temples() {
           <h1 className="temples-page__title">
             {filters.state !== "All States" ? `Temples in ${filters.state}` : "All Temples"}
           </h1>
-          <p className="temples-page__sub">{filtered.length} temples found</p>
+          <p className="temples-page__sub">{total} temples found</p>
         </div>
         <div className="temples-page__meta">
           <span className="temples-page__count">
-            Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filtered.length)}–
-            {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
+            Showing {temples.length === 0 ? 0 : (page - 1) * ITEMS_PER_PAGE + 1}–
+            {Math.min(page * ITEMS_PER_PAGE, total)} of {total}
           </span>
 
           {/* Mobile Filter Button */}
@@ -154,19 +150,26 @@ export default function Temples() {
 
         {/* Grid */}
         <div className="temples-page__right">
-          {paginated.length === 0 ? (
+          {loading ? (
+            <div className="temples-page__empty">
+              <span>🛕</span>
+              <p>Loading temples...</p>
+            </div>
+          ) : error ? (
+            <div className="temples-page__empty">
+              <span>⚠️</span>
+              <p>{error}</p>
+            </div>
+          ) : temples.length === 0 ? (
             <div className="temples-page__empty">
               <span>🛕</span>
               <p>No temples found matching your filters.</p>
-              <button onClick={() => handleFilterChange({
-                search: "", deities: [], state: "All States",
-                district: "All Districts", sort: "Popularity"
-              })}>Clear Filters</button>
+              <button onClick={clearFilters}>Clear Filters</button>
             </div>
           ) : (
             <motion.div className="temples-page__grid">
-              {paginated.map((temple, i) => (
-                <TempleCard key={temple.id} temple={temple} index={i} />
+              {temples.map((temple, i) => (
+                <TempleCard key={temple._id || temple.id} temple={temple} index={i} />
               ))}
             </motion.div>
           )}
@@ -175,24 +178,24 @@ export default function Temples() {
             <div className="temples-page__pagination">
               <button
                 className="page-btn page-btn--nav"
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                disabled={page === 1}
               >←</button>
-              {getPageNumbers().map((page, i) =>
-                page === "..." ? (
+              {getPageNumbers().map((p, i) =>
+                p === "..." ? (
                   <span key={`dots-${i}`} className="page-dots">...</span>
                 ) : (
                   <button
-                    key={page}
-                    className={`page-btn ${currentPage === page ? "active" : ""}`}
-                    onClick={() => setCurrentPage(page)}
-                  >{page}</button>
+                    key={p}
+                    className={`page-btn ${page === p ? "active" : ""}`}
+                    onClick={() => setPage(p)}
+                  >{p}</button>
                 )
               )}
               <button
                 className="page-btn page-btn--nav"
-                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                disabled={page === totalPages}
               >→</button>
             </div>
           )}
@@ -224,18 +227,14 @@ export default function Temples() {
                 </button>
               </div>
               <div className="temples-page__drawer-body">
-                <TempleFilters
-                  onFilterChange={(f) => {
-                    handleFilterChange(f);
-                  }}
-                />
+                <TempleFilters onFilterChange={handleFilterChange} />
               </div>
               <div className="temples-page__drawer-footer">
                 <button
                   className="temples-page__drawer-apply"
                   onClick={() => setFilterOpen(false)}
                 >
-                  Show {filtered.length} Temples
+                  Show {total} Temples
                 </button>
               </div>
             </motion.div>

@@ -243,4 +243,3 @@ const Districts = () => {
 };
 
 export default Districts;
-```
