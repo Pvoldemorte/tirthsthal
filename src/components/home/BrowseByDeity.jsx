@@ -10,6 +10,11 @@ const fallbackDeities = [
   { name: "Devi",    filterKey: "Devi",    image: "/images/durga.jpg",     color: "#ec4899" },
   { name: "Ganesh",  filterKey: "Ganesh",  image: "/images/ganesh.jpg",    color: "#f97316" },
   { name: "Hanuman", filterKey: "Hanuman", image: "/images/hanuman.jpg",   color: "#ef4444" },
+  { name: "Ram",   filterKey: "Ram",   image: "/images/LordShiva.jpg", color: "#3b82f6" },
+  { name: "Krishna",  filterKey: "Krishna",  image: "/images/vishnu.jpg",    color: "#f59e0b" },
+  { name: "Durga Mata",    filterKey: "Durga Mata",    image: "/images/durga.jpg",     color: "#ec4899" },
+  { name: "Shani Dev",  filterKey: "Shani Dev",  image: "/images/ganesh.jpg",    color: "#f97316" },
+  
 ];
 
 export default function BrowseByDeity() {
@@ -23,8 +28,9 @@ export default function BrowseByDeity() {
       .then((data) => {
         if (data.deities?.length > 0) setDeities(data.deities);
       })
-      .catch(() => {}); // silently fall back to hardcoded list
+      .catch(() => {console.log()});
   }, []);
+
 
   const handleClick = (deity) => {
     if (!deity.filterKey) {

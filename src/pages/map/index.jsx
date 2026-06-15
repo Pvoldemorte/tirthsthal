@@ -71,7 +71,7 @@ function FlyTo({ center }) {
 }
 
 export default function MapPage() {
-  const allTemples = getAllTemples("Madhya Pradesh");
+  const [allTemples, setAllTemples] = useState([]);
 
   const [search,          setSearch]          = useState("");
   const [selState,        setSelState]        = useState("All States");
@@ -82,7 +82,7 @@ export default function MapPage() {
   const [districtOpen,    setDistrictOpen]    = useState(false);
   const [typeOpen,        setTypeOpen]        = useState(false);
   const [deityOpen,       setDeityOpen]       = useState(false);
-  const [selectedTemple,  setSelectedTemple]  = useState(allTemples[0]);
+  const [selectedTemple, setSelectedTemple] = useState(null);
   const [flyCenter,       setFlyCenter]       = useState(null);
   const [showList,        setShowList]        = useState(false);
   const [activeFilters,   setActiveFilters]   = useState([]);
@@ -151,6 +151,19 @@ export default function MapPage() {
       )}
     </div>
   );
+
+  useEffect(() => {
+  loadTemples();
+}, []);
+
+const loadTemples = async () => {
+  try {
+    const data = await getTemples();
+    setAllTemples(data);
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   return (
     <div className="map-page">
@@ -421,7 +434,7 @@ export default function MapPage() {
                   View Details
                 </Link>
                 <a
-                  href={`https://maps.google.com/?q=${selectedTemple.name} ${selectedTemple.district}`}
+                  href={`https://maps.google.com/?q=${selectedTemple.coordinates.lat},${selectedTemple.coordinates.lng}`}
                   target="_blank"
                   rel="noreferrer"
                   className="map-sidebar__directions-btn"

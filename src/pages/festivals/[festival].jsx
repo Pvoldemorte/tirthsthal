@@ -3,11 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiHome, FiChevronRight, FiCalendar, FiMapPin, FiHeart, FiClock } from "react-icons/fi";
 import { useFavorites } from "../../context/FavoritesContext";
-import { getFestivalBySlug } from "../../services/contentService";
+import { getFestivals } from "../../services/contentService";
 import "../../styles/pages/festivals.css";
 
 export default function FestivalDetail() {
-  const { festival: slug } = useParams();
+  // const { festival: slug } = useParams();
   const [festival, setFestival] = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
@@ -16,12 +16,12 @@ export default function FestivalDetail() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    getFestivalBySlug(slug)
-      .then((data) => setFestival(data))
-      .catch(() => setError("Festival not found"))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
+    getFestivals()
+    .then((data) => setFestival(data))
+    .catch(() => setError("Festival not found"))
+    .finally(() => setLoading(false));
+  }, []);
+  
   const handleFav = () => {
     if (!festival) return;
     toggleFavorite({
@@ -30,7 +30,6 @@ export default function FestivalDetail() {
       image: festival.image,
       location: festival.location,
       deityColor: festival.deityColor,
-      slug: festival.slug,
       type: "festival",
     });
   };
@@ -49,6 +48,7 @@ export default function FestivalDetail() {
       </div>
     );
   }
+
 
   return (
     <div className="fest-page">

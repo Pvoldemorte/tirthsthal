@@ -33,12 +33,12 @@ const resources = {
       },
 
       // ── Stats ──
-      stats: {
-        temples:   "Total Temples",
-        districts: "Districts Covered",
-        deities:   "Deities",
-        devotees:  "Devotees Connected",
-      },
+     "stats": {
+  "temples":   "Temples Listed",
+  "districts": "Districts Covered",
+  "festivals": "Festivals",
+  "devotees":  "Devotees Served"
+},
 
       // ── Browse by Deity ──
       deity: {

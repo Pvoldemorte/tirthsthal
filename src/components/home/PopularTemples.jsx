@@ -14,7 +14,8 @@ export default function PopularTemples() {
   useEffect(() => {
     const fetchPopular = async () => {
       try {
-        const data = await getTemples({ sort: "Rating", limit: 6 });
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/temples?sort=Rating&limit=6`);
+        const data = await res.json();
         setTemples(data.temples || []);
       } catch (err) {
         console.error("Failed to load popular temples:", err);
@@ -25,9 +26,11 @@ export default function PopularTemples() {
     fetchPopular();
   }, []);
 
+  console.log(temples)
+
   const handleFav = (e, temple) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation();  
     toggleFavorite({
       id:         temple._id,
       name:       temple.name,
