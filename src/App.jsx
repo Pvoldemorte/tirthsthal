@@ -5,7 +5,7 @@ import Home         from "./pages/index";
 import Temples      from "./pages/temples/index";
 import TempleDetail from "./pages/temples/[slug]";
 import Festivals    from "./pages/festivals/index";
-import DistrictPage from "./pages/districts/DistrictPage";
+// import DistrictPage from "./pages/districts/DistrictPage";
 import ScrollToTop from "./pages/ScrollToTop";
 import Blog       from "./pages/blog/index";
 import BlogDetail from "./pages/blog/BlogDetail";
@@ -31,8 +31,8 @@ export default function App() {
         <Route path="/temples"             element={<Temples />}      />
         <Route path="/temples/:slug"       element={<TempleDetail />} />
         <Route path="/festivals"           element={<Festivals />}    />
-        <Route path="/districts"           element={<DistrictPage />} />
-        <Route path="/districts/:district" element={<DistrictPage />} />
+        {/* <Route path="/districts"           element={<DistrictPage />} /> */}
+        {/* <Route path="/districts/:district" element={<DistrictPage />} /> */}
         <Route path="/blog"                element={<Blog />}       />
         <Route path="/blog/:slug"          element={<BlogDetail />} />
         {/* <Route path="/about"               element={<About />} /> */}

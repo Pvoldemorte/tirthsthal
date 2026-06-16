@@ -38,7 +38,7 @@ export default function Footer() {
         {/* Brand */}
         <div className="footer__brand">
           <Link to="/" className="footer__logo">
-            <img src="/icons/tirthstal.png" alt="Tirthstal" className="footer__logo-img" />
+            <img src="./images/images.png" alt="Tirthstal" className="footer__logo-img" />
             <div>
               <p className="footer__logo-name">Tirthstal</p>
               <p className="footer__logo-sub">Sacred Temples, Divine Journey</p>

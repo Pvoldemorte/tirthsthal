@@ -82,7 +82,7 @@ export const deleteBlog = async (id) => {
 export const getDistricts = async (state) => {
   const params = state ? { state } : {};
   const { data } = await API.get("/districts", { params });
-  return data.districts;
+  return console.log(data.districts);
 };
 
 export const getDistrictBySlug = async (slug) => {

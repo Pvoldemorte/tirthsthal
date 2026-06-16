@@ -14,7 +14,7 @@ export default function PopularTemples() {
   useEffect(() => {
     const fetchPopular = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/temples?sort=Rating&limit=6`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/temples`);
         const data = await res.json();
         setTemples(data.temples || []);
       } catch (err) {

@@ -188,7 +188,7 @@ export default function Festivals() {
           ) : (
             <div className="fest-grid">
               {filtered.slice(0, visible).map((f, i) => (
-                <Link to={`/festivals/${f.slug}`} key={f._id} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link to={f.slug ? `/festivals/${f.slug}` : "#"} key={f._id} style={{ textDecoration: "none", color: "inherit" }}>
                   <motion.div
                     className="fest-card"
                     initial={{ opacity: 0, y: 20 }}

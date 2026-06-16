@@ -13,7 +13,6 @@ import "../../styles/common/navbar.css";
 const navLinks = [
   { label: "Home",       path: "/"          },
   { label: "Temples",    path: "/temples"   },
-  { label: "Districts",  path: "/districts" },
   { label: "Festivals",  path: "/festivals" },
   { label: "Temple Map", path: "/map"       },
   { label: "Blog",       path: "/blog"      },
