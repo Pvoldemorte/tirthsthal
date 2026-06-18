@@ -509,3 +509,12 @@
   background: #fff;
   cursor: pointer;
 }
+
+
+@media (max-width: 480px){
+     
+      .fest-sidebar__box {
+  width: 100%;
+  display: grid;
+ 
+}} 

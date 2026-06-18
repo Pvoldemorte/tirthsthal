@@ -9,7 +9,7 @@ import Festivals    from "./pages/festivals/index";
 import ScrollToTop from "./pages/ScrollToTop";
 import Blog       from "./pages/blog/index";
 import BlogDetail from "./pages/blog/BlogDetail";
-import MapPage from "./pages/map";
+// import MapPage from "./pages/map";
 import "./styles/global/variables.css";
 import "./styles/global/globals.css";
 import Favorites from "./pages/favorites/index";
@@ -36,7 +36,7 @@ export default function App() {
         <Route path="/blog"                element={<Blog />}       />
         <Route path="/blog/:slug"          element={<BlogDetail />} />
         {/* <Route path="/about"               element={<About />} /> */}
-        <Route path="/map"                 element={<MapPage />} />
+        {/* <Route path="/map"                 element={<MapPage />} /> */}
         <Route path="/favorites" element={<Favorites />} />
         {/* <Route path="/contact"             element={<Contact />}/> */}
            <Route path="/auth/login"       element={<Login />}      />

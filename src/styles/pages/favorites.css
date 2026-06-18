@@ -539,4 +539,7 @@
   .fav-card__img-wrap { height: 140px; }
   .fav-list-item__img { width: 64px; height: 54px; }
   .fav-list-item__name { font-size: 13.5px; }
+  .fav-card__actions{
+    display: grid;
+  }
 }

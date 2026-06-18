@@ -53,7 +53,7 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .deity__card:hover {
-  border-color: #c8610a;
+  border-color: #fdf9ff;
   box-shadow: 0 4px 16px rgba(200, 97, 10, 0.1);
 }
 

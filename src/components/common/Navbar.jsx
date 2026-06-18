@@ -14,7 +14,7 @@ const navLinks = [
   { label: "Home",       path: "/"          },
   { label: "Temples",    path: "/temples"   },
   { label: "Festivals",  path: "/festivals" },
-  { label: "Temple Map", path: "/map"       },
+  // { label: "Temple Map", path: "/map"       },
   { label: "Blog",       path: "/blog"      },
   // { label: "About Us",   path: "/about"     },
   // { label: "Contact",    path: "/contact"   },

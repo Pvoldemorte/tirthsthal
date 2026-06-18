@@ -3,6 +3,7 @@ import { FiArrowRight, FiMapPin } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "../../styles/home/districtExplore.css";
+import { getTemples } from "../../services/templeService";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -10,6 +11,22 @@ export default function DistrictExplore() {
   const [districts,    setDistricts]    = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [visibleCards, setVisibleCards] = useState(8);
+  const [temples , setTemples]          = useState([]);
+
+  useEffect(() => {
+    const fetchPopular = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/temples`);
+        const data = await res.json();
+        setTemples(data.temples || []);
+      } catch (err) {
+        console.error("Failed to load popular temples:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPopular();
+  }, []);
 
   useEffect(() => {
     fetch(`${API}/districts`)

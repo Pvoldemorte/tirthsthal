@@ -149,7 +149,7 @@
   .fest-page__hero  { padding: 24px 20px; }
   .fest-page__title { font-size: 26px; }
   .fest-page__body  { grid-template-columns: 1fr; }
-  .fest-page__sidebar { position: static; }
+  /* .fest-page__sidebar { position: static; } */
   .fest-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .fest-filter { flex-wrap: wrap; gap: 8px; padding: 12px; }
   .fest-filter__search { min-width: 100%; order: -1; }
@@ -159,7 +159,7 @@
 }
 @media (max-width: 480px) {
   .fest-page { padding: 14px 12px 32px; }
-  .fest-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .fest-grid { grid-template-columns: repeat(1, 1fr); gap: 10px; }
   .fest-card__img-wrap { height: 125px; }
   .fest-card__name  { font-size: 12.5px; }
   .fest-page__title { font-size: 22px; }
@@ -321,6 +321,21 @@
 @media (max-width: 480px) {
   .footer { padding: 32px 12px 0; }
   .footer__top { gap: 24px; }
+  .footer__newsletter-input {
+  width: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.footer__newsletter-input input {
+  min-width: 0;
+  width: 100%;
+  flex-shrink: 1;
+}
+
+.footer__newsletter-input button {
+  flex-shrink: 0;
+}
 }
 
 /* ── MAP PAGE ── */
