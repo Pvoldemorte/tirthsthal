@@ -19,7 +19,7 @@ export default function Favorites() {
 
   const filtered = favorites
     .filter((f) =>
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
+      // f.name.toLowerCase().includes(search.toLowerCase()) ||
       f.location?.toLowerCase().includes(search.toLowerCase()) ||
       f.deity?.toLowerCase().includes(search.toLowerCase())
     )

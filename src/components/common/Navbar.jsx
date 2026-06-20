@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation }           from "react-router-dom";
 import { motion, AnimatePresence }     from "framer-motion";
+import { useTranslation }              from "react-i18next";
 import {
   FiHeart, FiGlobe, FiChevronDown,
   FiUser, FiLogOut, FiSettings,
@@ -11,13 +12,10 @@ import { useFavorites }  from "../../context/FavoritesContext";
 import "../../styles/common/navbar.css";
 
 const navLinks = [
-  { label: "Home",       path: "/"          },
-  { label: "Temples",    path: "/temples"   },
-  { label: "Festivals",  path: "/festivals" },
-  // { label: "Temple Map", path: "/map"       },
-  { label: "Blog",       path: "/blog"      },
-  // { label: "About Us",   path: "/about"     },
-  // { label: "Contact",    path: "/contact"   },
+  { key: "nav.home",      path: "/"          },
+  { key: "nav.temples",   path: "/temples"   },
+  { key: "nav.festivals", path: "/festivals" },
+  { key: "nav.blog",      path: "/blog"      },
 ];
 
 const languages = [
@@ -31,13 +29,21 @@ export default function Navbar() {
   const { pathname }                      = useLocation();
   const { user, isLoggedIn, logout }      = useAuth();
   const { favorites }                     = useFavorites();
+  const { t, i18n }                       = useTranslation();
 
   const [langOpen,     setLangOpen]     = useState(false);
-  const [activeLang,   setActiveLang]   = useState("English");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [menuOpen,     setMenuOpen]     = useState(false);
   const [scrolled,     setScrolled]     = useState(false);
   const userMenuRef                     = useRef(null);
+
+  const activeLang = languages.find((l) => l.code === i18n.language)?.label || "हिंदी";
+
+  const handleLangChange = (code) => {
+    i18n.changeLanguage(code);
+    localStorage.setItem("tirthstal_lang", code);
+    setLangOpen(false);
+  };
 
   const loginDetails = (() => {
     try { return JSON.parse(localStorage.getItem("tirthstal_user")); }
@@ -102,7 +108,7 @@ export default function Navbar() {
                 to={link.path}
                 className={`navbar__link ${pathname === link.path ? "active" : ""}`}
               >
-                {link.label}
+                {t(link.key)}
                 {pathname === link.path && (
                   <motion.span
                     className="navbar__underline"
@@ -136,7 +142,7 @@ export default function Navbar() {
                     <li
                       key={lang.code}
                       className={activeLang === lang.label ? "selected" : ""}
-                      onClick={() => { setActiveLang(lang.label); setLangOpen(false); }}
+                      onClick={() => handleLangChange(lang.code)}
                     >
                       {lang.label}
                     </li>
@@ -274,7 +280,7 @@ export default function Navbar() {
                       className={`navbar__drawer-link ${pathname === link.path ? "active" : ""}`}
                       onClick={() => setMenuOpen(false)}
                     >
-                      {link.label}
+                      {t(link.key)}
                     </Link>
                   </motion.li>
                 ))}

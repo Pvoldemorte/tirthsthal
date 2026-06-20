@@ -39,25 +39,28 @@ export default function Signup() {
     setForm((p) => ({ ...p, [field]: val }));
 
   const handleSignup = async () => {
-  if (!form.name || !form.email || !form.password || !form.confirm) {
-    setError("Please fill in all fields.");
-    return;
-  }
+    if (!form.name || !form.email || !form.password || !form.confirm) {
+      setError("Please fill in all fields.");
+      return;
+    }
 
-  if (form.password !== form.confirm) {
-    setError("Passwords do not match.");
-    return;
-  }
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
 
-  try {
-    await register(form.name,form.email,form.password),
+    setError("");
+    setLoading(true);
 
-    navigate("auth/login");
-
-  } catch (err) {
-    setError(err.message);
-  }
-};
+    try {
+      await register(form.name, form.email, form.password);
+      navigate("/");
+    } catch (err) {
+      setError(err.message || "Signup failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const prevSlide = () =>
     setSlideIndex((p) => (p === 0 ? templeSlides.length - 1 : p - 1));
@@ -65,9 +68,6 @@ export default function Signup() {
     setSlideIndex((p) => (p === templeSlides.length - 1 ? 0 : p + 1));
 
   const current = templeSlides[slideIndex];
-
-
-  console.log()
 
   return (
     <div className="auth-page">

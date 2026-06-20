@@ -160,7 +160,8 @@ const resources = {
       },
       stats: {
         temples:   "कुल मंदिर",
-        districts: "जिले охваченные",
+        districts: "जिले शामिल",
+        festivals: "त्योहार",
         deities:   "देवी-देवता",
         devotees:  "भक्त जुड़े",
       },
@@ -272,6 +273,7 @@ const resources = {
       stats: {
         temples:   "एकूण मंदिरे",
         districts: "जिल्हे समाविष्ट",
+        festivals: "सण",
         deities:   "देवता",
         devotees:  "भक्त जोडले",
       },
@@ -383,6 +385,7 @@ const resources = {
       stats: {
         temples:   "કુલ મંદિરો",
         districts: "જિલ્લા આવરી",
+        festivals: "તહેવારો",
         deities:   "દેવતા",
         devotees:  "ભક્તો જોડાયા",
       },
@@ -466,12 +469,14 @@ const resources = {
   },
 };
 
+const savedLang = localStorage.getItem("tirthstal_lang") || "hi";
+
 i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: "en",
-    fallbackLng: "en",
+    lng: savedLang,
+    fallbackLng: "hi",
     interpolation: { escapeValue: false },
   });
 

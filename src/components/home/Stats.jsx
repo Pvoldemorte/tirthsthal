@@ -11,9 +11,12 @@ function CountUp({ target, suffix }) {
   const started = useRef(false);
 
   useEffect(() => {
+    started.current = false;
+    setCount(0);
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
+        if (entry.isIntersecting && !started.current && target > 0) {
           started.current = true;
           const duration = 1800;
           const steps = 60;
@@ -44,41 +47,70 @@ function CountUp({ target, suffix }) {
   );
 }
 
+const fetchJson = async (url, timeoutMs = 8000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`${url} returned ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+};
+
 export default function Stats() {
   const { t } = useTranslation();
-  const [counts, setCounts] = useState({
-    temples:   0,
-    districts: 0,
-    festivals: 0,
-  });
+  const [counts, setCounts] = useState({ temples: 0, districts: 0, festivals: 0 });
 
   useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const [templesRes, districtsRes, festivalsRes] = await Promise.all([
-          fetch(`${API}/temples?limit=1`).then((r) => r.json()),
-          fetch(`${API}/districts`).then((r) => r.json()),
-          fetch(`${API}/festivals`).then((r) => r.json()),
-        ]);
+    let cancelled = false;
 
-        setCounts({
-          temples:   templesRes.total        || templesRes.count   || 0,
-          districts: districtsRes.count      || districtsRes.districts?.length || 0,
-          festivals: festivalsRes.count      || festivalsRes.festivals?.length || 0,
-        });
-      } catch (err) {
-        console.error("Failed to fetch stats:", err);
-      }
+    const fetchCounts = async () => {
+      const results = await Promise.allSettled([
+        fetchJson(`${API}/temples?limit=1`),
+        fetchJson(`${API}/districts`),
+        fetchJson(`${API}/festivals`),
+      ]);
+
+      if (cancelled) return;
+
+      const [templesResult, districtsResult, festivalsResult] = results;
+
+      setCounts((prev) => ({
+        temples:
+          templesResult.status === "fulfilled"
+            ? (templesResult.value.total ?? prev.temples)
+            : prev.temples,
+        districts:
+          districtsResult.status === "fulfilled"
+            ? (districtsResult.value.count ?? districtsResult.value.districts?.length ?? prev.districts)
+            : prev.districts,
+        festivals:
+          festivalsResult.status === "fulfilled"
+            ? (festivalsResult.value.count ?? festivalsResult.value.festivals?.length ?? prev.festivals)
+            : prev.festivals,
+      }));
+
+      results.forEach((r, i) => {
+        if (r.status === "rejected") {
+          const names = ["temples", "districts", "festivals"];
+          console.error(`Stats: failed to fetch ${names[i]} count:`, r.reason);
+        }
+      });
     };
 
     fetchCounts();
+    return () => { cancelled = true; };
   }, []);
 
   const stats = [
-    { icon: "🛕", value: counts.temples,   suffix: "+", label: t("stats.temples")   },
-    { icon: "🏙️", value: counts.districts, suffix: "+", label: t("stats.districts") },
-    { icon: "🪔", value: counts.festivals, suffix: "+", label: t("stats.festivals") },
-    { icon: "👥", value: 10,               suffix: "L+", label: t("stats.devotees") },
+    { icon: "🛕",  value: counts.temples,   suffix: "+",  label: t("stats.temples")   },
+    { icon: "🏙️", value: counts.districts, suffix: "+",  label: t("stats.districts") },
+    { icon: "🪔",  value: counts.festivals, suffix: "+",  label: t("stats.festivals") },
+    { icon: "👥",  value: 10,               suffix: "L+", label: t("stats.devotees")  },
   ];
 
   return (

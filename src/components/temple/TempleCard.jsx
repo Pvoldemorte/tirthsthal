@@ -7,12 +7,13 @@ import "../../styles/temple/templeCard.css";
 export default function TempleCard({ temple, index }) {
 
   const { isFavorite, toggleFavorite } = useFavorites();
+  const templeId = temple._id || temple.id;
 
   const handleFav = (e) => {
     e.preventDefault();
     e.stopPropagation();
     toggleFavorite({
-      id:         temple.id,
+      id:         templeId,
       name:       temple.name,
       image:      temple.images?.[0] || "/images/placeholder-temple.jpg",
       location:   `${temple.district}, ${temple.state}`,
@@ -38,10 +39,11 @@ export default function TempleCard({ temple, index }) {
           src={temple.images?.[0] || "/images/placeholder-temple.jpg"}
           alt={temple.name}
           className="tcard__img"
+          onError={(e) => { e.target.src = "/images/placeholder-temple.jpg"; }}
         />
 
         <button
-          className={`tcard__fav ${isFavorite(temple.id) ? "active" : ""}`}
+          className={`tcard__fav ${isFavorite(templeId) ? "active" : ""}`}
           onClick={handleFav}
         >
           <FiHeart size={14} />
