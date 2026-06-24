@@ -49,6 +49,27 @@ export const updateProfile = async (updates) => {
   return data.user;
 };
 
+// ── Change Password ──
+export const changePassword = async (currentPassword, newPassword) => {
+  const { data } = await API.put("/auth/change-password", { currentPassword, newPassword });
+  return data;
+};
+
+// ── Update Notification / Privacy Settings ──
+export const updateSettings = async (settings) => {
+  const { data } = await API.put("/auth/settings", settings);
+  localStorage.setItem("tirthstal_user", JSON.stringify(data.user));
+  return data.user;
+};
+
+// ── Delete My Account ──
+export const deleteAccount = async () => {
+  const { data } = await API.delete("/auth/account");
+  localStorage.removeItem("tirthstal_token");
+  localStorage.removeItem("tirthstal_user");
+  return data;
+};
+
 // ── Get current user from localStorage ──
 export const getCurrentUser = () => {
   const user = localStorage.getItem("tirthstal_user");

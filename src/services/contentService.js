@@ -119,3 +119,9 @@ export const markReviewHelpful = async (templeId, reviewId) => {
   const { data } = await API.post(`/temples/${templeId}/reviews/${reviewId}/helpful`);
   return data;
 };
+
+// ── My reviews across all temples ──
+export const getMyReviews = async () => {
+  const { data } = await API.get("/my-reviews");
+  return data.reviews;
+};

@@ -6,8 +6,9 @@ import {
   FiHeart, FiShare2, FiCamera, FiInfo,
   FiNavigation, FiPhone, FiCalendar
 } from "react-icons/fi";
-import { getTempleBySlug } from "../../services/templeService";
+import { getTempleBySlug, markTempleVisited } from "../../services/templeService";
 import { useFavorites } from "../../context/FavoritesContext";
+import { useAuth } from "../../context/AuthContext";
 import "../../styles/temple/templeDetail.css";
 
 const tabs = ["Overview", "Gallery", "Location", "Festivals", "Nearby"];
@@ -21,6 +22,7 @@ export default function TempleDetail() {
   const [imgIndex,  setImgIndex]    = useState(0);
   const [isFav,     setIsFav]       = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     setLoading(true);
@@ -28,10 +30,16 @@ export default function TempleDetail() {
     setImgIndex(0);
     setActiveTab("Overview");
     getTempleBySlug(slug)
-      .then((t) => setTemple(t))
+      .then((t) => {
+        setTemple(t);
+        // ── Logged-in user ne temple page dekha → visited mark karo ──
+        if (isAuthenticated && t?._id) {
+          markTempleVisited(t._id).catch(() => {});
+        }
+      })
       .catch(() => setError("Temple not found"))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, isAuthenticated]);
 
   if (loading) return (
     <div className="temple-detail__not-found">
@@ -243,6 +251,7 @@ export default function TempleDetail() {
                   {temple.website && (
                     <>
                       <h4>Official Website</h4>
+
                       <a href={temple.website} target="_blank" rel="noreferrer">{temple.website}</a>
                     </>
                   )}

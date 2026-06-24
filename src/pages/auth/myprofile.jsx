@@ -1,13 +1,24 @@
-import { useState } from "react";
-import { Link }     from "react-router-dom";
-import { motion }   from "framer-motion";
+import { useState, useEffect } from "react";
+import { Link, useNavigate }   from "react-router-dom";
+import { motion }              from "framer-motion";
 import {
   FiHome, FiChevronRight, FiEdit2, FiSave,
   FiUser, FiMail, FiPhone, FiMapPin,
   FiHeart, FiSettings, FiCamera, FiLock,
-  FiGlobe, FiLogOut
+  FiGlobe, FiLogOut, FiStar, FiLoader
 } from "react-icons/fi";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth }        from "../../context/AuthContext";
+import { useFavorites }   from "../../context/FavoritesContext";
+import {
+  updateProfile as updateProfileAPI,
+  changePassword as changePasswordAPI,
+  updateSettings as updateSettingsAPI,
+  deleteAccount as deleteAccountAPI,
+} from "../../services/authServices";
+import {
+  getMyVisitedTemples,
+} from "../../services/templeService";
+import { getMyReviews } from "../../services/contentService";
 import "../../styles/pages/profilePage.css";
 
 const tabs = [
@@ -19,18 +30,16 @@ const tabs = [
 
 const languages = ["English", "हिंदी", "मराठी", "ગુજરાતી"];
 
-const visitedTemples = [
-  { name: "Mahakaleshwar Temple", location: "Ujjain, MP",      date: "March 2026",  image: "https://images.unsplash.com/photo-1548013146-72479768bada?w=400" },
-  { name: "Omkareshwar Temple",   location: "Khandwa, MP",     date: "January 2026",image: "https://images.unsplash.com/photo-1577083552431-6e5fd01988ec?w=400" },
-  { name: "Khajuraho Temples",    location: "Chhatarpur, MP",  date: "Dec 2025",    image: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=400" },
-];
-
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const navigate          = useNavigate();
+  const { user, logout, refreshUser } = useAuth();
+  const { favorites, removeFavorite, loading: favLoading } = useFavorites();
 
   const [activeTab, setActiveTab] = useState("profile");
   const [editing,   setEditing]   = useState(false);
+  const [saving,    setSaving]    = useState(false);
   const [saved,     setSaved]     = useState(false);
+  const [errMsg,    setErrMsg]    = useState("");
 
   const [form, setForm] = useState({
     name:     user?.name     || "",
@@ -41,17 +50,154 @@ export default function Profile() {
     bio:      user?.bio      || "",
   });
 
+  // ── Visited temples & reviews — real backend data ──
+  const [visitedTemples, setVisitedTemples] = useState([]);
+  const [visitedLoading, setVisitedLoading] = useState(true);
+  const [myReviews,      setMyReviews]      = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    setVisitedLoading(true);
+    getMyVisitedTemples()
+      .then(setVisitedTemples)
+      .catch((err) => console.error("Failed to load visited temples:", err))
+      .finally(() => setVisitedLoading(false));
+
+    setReviewsLoading(true);
+    getMyReviews()
+      .then(setMyReviews)
+      .catch((err) => console.error("Failed to load reviews:", err))
+      .finally(() => setReviewsLoading(false));
+  }, [user]);
+
+  // ── Settings state — initialized from user, saved to backend ──
+  const [notifSettings, setNotifSettings] = useState(
+    user?.notificationSettings || {
+      festivalReminders: true,
+      newTempleAdded:    true,
+      reviewReplies:     false,
+      weeklyNewsletter:  false,
+    }
+  );
+  const [privacySettings, setPrivacySettings] = useState(
+    user?.privacySettings || {
+      showFavoritesPublicly: true,
+      showReviewsPublicly:   true,
+    }
+  );
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsSaved,  setSettingsSaved]  = useState(false);
+
+  // ── Password change state ──
+  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError,  setPwError]  = useState("");
+  const [pwSuccess, setPwSuccess] = useState("");
+
+  // ── Delete account state ──
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const handleChange = (field, val) =>
     setForm((p) => ({ ...p, [field]: val }));
 
-  const handleSave = () => {
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  // ── Save profile to backend ──
+  const handleSave = async () => {
+    setSaving(true);
+    setErrMsg("");
+    try {
+      await updateProfileAPI({
+        name:     form.name,
+        phone:    form.phone,
+        city:     form.city,
+        language: form.language,
+        bio:      form.bio,
+      });
+      await refreshUser?.();
+      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setErrMsg(err.response?.data?.message || "Failed to update profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Toggle a notification/privacy setting and persist immediately ──
+  const handleToggleNotif = async (key) => {
+    const updated = { ...notifSettings, [key]: !notifSettings[key] };
+    setNotifSettings(updated);
+    await persistSettings(updated, privacySettings);
+  };
+
+  const handleTogglePrivacy = async (key) => {
+    const updated = { ...privacySettings, [key]: !privacySettings[key] };
+    setPrivacySettings(updated);
+    await persistSettings(notifSettings, updated);
+  };
+
+  const persistSettings = async (notif, privacy) => {
+    setSettingsSaving(true);
+    try {
+      await updateSettingsAPI({ notificationSettings: notif, privacySettings: privacy });
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 2000);
+    } catch (err) {
+      console.error("Failed to save settings:", err);
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  // ── Change password ──
+  const handleChangePassword = async () => {
+    setPwError("");
+    setPwSuccess("");
+
+    if (!pwForm.current || !pwForm.next || !pwForm.confirm) {
+      setPwError("Please fill in all fields.");
+      return;
+    }
+    if (pwForm.next.length < 6) {
+      setPwError("New password must be at least 6 characters.");
+      return;
+    }
+    if (pwForm.next !== pwForm.confirm) {
+      setPwError("New passwords do not match.");
+      return;
+    }
+
+    setPwSaving(true);
+    try {
+      await changePasswordAPI(pwForm.current, pwForm.next);
+      setPwSuccess("Password updated successfully!");
+      setPwForm({ current: "", next: "", confirm: "" });
+      setTimeout(() => setPwSuccess(""), 4000);
+    } catch (err) {
+      setPwError(err.response?.data?.message || "Failed to update password.");
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  // ── Delete account ──
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccountAPI();
+      logout();
+      navigate("/");
+    } catch (err) {
+      console.error("Failed to delete account:", err);
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const userInitial = user?.name?.charAt(0).toUpperCase() || "U";
-  const save = localStorage.setItem(form.name , form.email , form.bio)
 
   return (
     <div className="profile-page">
@@ -71,9 +217,12 @@ export default function Profile() {
           {/* Avatar */}
           <div className="profile-sidebar__avatar-wrap">
             <div className="profile-sidebar__avatar">
-              <span>{userInitial}</span>
+              {user?.avatar
+                ? <img src={user.avatar} alt={user.name} />
+                : <span>{userInitial}</span>
+              }
             </div>
-            <button className="profile-sidebar__avatar-edit">
+            <button className="profile-sidebar__avatar-edit" title="Avatar upload coming soon">
               <FiCamera size={14} />
             </button>
           </div>
@@ -83,22 +232,30 @@ export default function Profile() {
           <p className="profile-sidebar__email">{user?.email || ""}</p>
 
           {/* Badge */}
-          <span className="profile-sidebar__badge">🙏 Devotee</span>
+          <span className="profile-sidebar__badge">
+            {user?.role === "admin" ? "🛡️ Admin" : "🙏 Devotee"}
+          </span>
 
-          {/* Stats */}
+          {/* Stats — real numbers */}
           <div className="profile-sidebar__stats">
             <div className="profile-sidebar__stat">
-              <span className="profile-sidebar__stat-num">12</span>
+              <span className="profile-sidebar__stat-num">
+                {visitedLoading ? "—" : visitedTemples.length}
+              </span>
               <span className="profile-sidebar__stat-label">Temples Visited</span>
             </div>
             <div className="profile-sidebar__stat-divider" />
             <div className="profile-sidebar__stat">
-              <span className="profile-sidebar__stat-num">8</span>
+              <span className="profile-sidebar__stat-num">
+                {favLoading ? "—" : favorites.length}
+              </span>
               <span className="profile-sidebar__stat-label">Favorites</span>
             </div>
             <div className="profile-sidebar__stat-divider" />
             <div className="profile-sidebar__stat">
-              <span className="profile-sidebar__stat-num">3</span>
+              <span className="profile-sidebar__stat-num">
+                {reviewsLoading ? "—" : myReviews.length}
+              </span>
               <span className="profile-sidebar__stat-label">Reviews</span>
             </div>
           </div>
@@ -140,8 +297,9 @@ export default function Profile() {
               <div className="profile-card__header">
                 <h3 className="profile-card__title">Personal Information</h3>
                 {editing ? (
-                  <button className="profile-card__save-btn" onClick={handleSave}>
-                    <FiSave size={15} /> Save Changes
+                  <button className="profile-card__save-btn" onClick={handleSave} disabled={saving}>
+                    {saving ? <FiLoader size={15} className="spin" /> : <FiSave size={15} />}
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                 ) : (
                   <button className="profile-card__edit-btn" onClick={() => setEditing(true)}>
@@ -149,6 +307,11 @@ export default function Profile() {
                   </button>
                 )}
               </div>
+
+              {/* Error */}
+              {errMsg && (
+                <div className="profile-card__error">⚠️ {errMsg}</div>
+              )}
 
               {/* Success */}
               {saved && (
@@ -181,9 +344,8 @@ export default function Profile() {
                     <input
                       type="email"
                       value={form.email}
-                      onChange={(e) => handleChange("email", e.target.value)}
-                      disabled={!editing}
-                      className={editing ? "active" : ""}
+                      disabled
+                      title="Email cannot be changed"
                     />
                   </div>
                 </div>
@@ -239,36 +401,48 @@ export default function Profile() {
                     disabled={!editing}
                     className={editing ? "active" : ""}
                     rows={3}
+                    maxLength={300}
                   />
                 </div>
 
               </div>
 
-              {/* Recently Visited */}
+              {/* Recently Visited — real data */}
               <div className="profile-visited">
                 <h4 className="profile-visited__title">Recently Visited Temples</h4>
-                <div className="profile-visited__list">
-                  {visitedTemples.map((t, i) => (
-                    <div key={i} className="profile-visited__item">
-                      <img src={t.image} alt={t.name}
-                        onError={(e) => e.target.src = "https://images.unsplash.com/photo-1548013146-72479768bada?w=400"}
-                      />
-                      <div className="profile-visited__info">
-                        <p className="profile-visited__name">{t.name}</p>
-                        <p className="profile-visited__loc">
-                          <FiMapPin size={11} /> {t.location}
-                        </p>
-                        <p className="profile-visited__date">{t.date}</p>
+
+                {visitedLoading ? (
+                  <p className="profile-empty-note">Loading...</p>
+                ) : visitedTemples.length === 0 ? (
+                  <div className="profile-empty-note">
+                    <p>You haven't marked any temples as visited yet.</p>
+                    <Link to="/temples" className="profile-empty-note__link">Explore Temples →</Link>
+                  </div>
+                ) : (
+                  <div className="profile-visited__list">
+                    {visitedTemples.slice(0, 5).map((t) => (
+                      <div key={t._id} className="profile-visited__item">
+                        <img
+                          src={t.images?.[0] || "https://images.unsplash.com/photo-1548013146-72479768bada?w=400"}
+                          alt={t.name}
+                          onError={(e) => e.target.src = "https://images.unsplash.com/photo-1548013146-72479768bada?w=400"}
+                        />
+                        <div className="profile-visited__info">
+                          <p className="profile-visited__name">{t.name}</p>
+                          <p className="profile-visited__loc">
+                            <FiMapPin size={11} /> {t.district}, {t.state}
+                          </p>
+                          <p className="profile-visited__date">
+                            {new Date(t.visitedAt).toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
+                          </p>
+                        </div>
+                        <Link to={`/temples/${t.slug}`} className="profile-visited__btn">
+                          View
+                        </Link>
                       </div>
-                      <Link
-                        to={`/temples/${t.name.toLowerCase().replace(/ /g, "-")}`}
-                        className="profile-visited__btn"
-                      >
-                        View
-                      </Link>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </motion.div>
@@ -284,35 +458,45 @@ export default function Profile() {
             >
               <div className="profile-card__header">
                 <h3 className="profile-card__title">My Favorite Temples</h3>
-                <span className="profile-card__count">8 temples</span>
+                <span className="profile-card__count">{favorites.length} temples</span>
               </div>
 
-              <div className="profile-favorites__grid">
-                {visitedTemples.map((t, i) => (
-                  <div key={i} className="profile-fav-card">
-                    <div className="profile-fav-card__img">
-                      <img src={t.image} alt={t.name}
-                        onError={(e) => e.target.src = "https://images.unsplash.com/photo-1548013146-72479768bada?w=400"}
-                      />
-                      <button className="profile-fav-card__remove">
-                        <FiHeart size={14} />
-                      </button>
+              {favLoading ? (
+                <p className="profile-empty-note">Loading...</p>
+              ) : favorites.length === 0 ? (
+                <div className="profile-empty-note">
+                  <p>You haven't saved any temples yet.</p>
+                  <Link to="/temples" className="profile-empty-note__link">Explore Temples →</Link>
+                </div>
+              ) : (
+                <div className="profile-favorites__grid">
+                  {favorites.map((t) => (
+                    <div key={t.id} className="profile-fav-card">
+                      <div className="profile-fav-card__img">
+                        <img src={t.image} alt={t.name}
+                          onError={(e) => e.target.src = "https://images.unsplash.com/photo-1548013146-72479768bada?w=400"}
+                        />
+                        <button
+                          className="profile-fav-card__remove"
+                          onClick={() => removeFavorite(t.id)}
+                          title="Remove from favorites"
+                        >
+                          <FiHeart size={14} />
+                        </button>
+                      </div>
+                      <div className="profile-fav-card__info">
+                        <p className="profile-fav-card__name">{t.name}</p>
+                        <p className="profile-fav-card__loc">
+                          <FiMapPin size={11} /> {t.location}
+                        </p>
+                        <Link to={`/temples/${t.slug}`} className="profile-fav-card__btn">
+                          View Temple
+                        </Link>
+                      </div>
                     </div>
-                    <div className="profile-fav-card__info">
-                      <p className="profile-fav-card__name">{t.name}</p>
-                      <p className="profile-fav-card__loc">
-                        <FiMapPin size={11} /> {t.location}
-                      </p>
-                      <Link
-                        to={`/temples/${t.name.toLowerCase().replace(/ /g, "-")}`}
-                        className="profile-fav-card__btn"
-                      >
-                        View Temple
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
             </motion.div>
           )}
@@ -327,6 +511,8 @@ export default function Profile() {
             >
               <div className="profile-card__header">
                 <h3 className="profile-card__title">Settings</h3>
+                {settingsSaving && <span className="profile-card__count">Saving...</span>}
+                {settingsSaved   && <span className="profile-card__count">✅ Saved</span>}
               </div>
 
               <div className="profile-settings">
@@ -335,18 +521,22 @@ export default function Profile() {
                 <div className="profile-settings__section">
                   <h4>🔔 Notifications</h4>
                   {[
-                    { label: "Festival Reminders",    sub: "Get notified about upcoming festivals" },
-                    { label: "New Temple Added",      sub: "When a new temple is added in your area" },
-                    { label: "Review Replies",        sub: "When someone replies to your review" },
-                    { label: "Weekly Newsletter",     sub: "Weekly digest of temple news" },
-                  ].map((item, i) => (
-                    <div key={i} className="profile-settings__toggle-row">
+                    { key: "festivalReminders", label: "Festival Reminders",    sub: "Get notified about upcoming festivals" },
+                    { key: "newTempleAdded",    label: "New Temple Added",      sub: "When a new temple is added in your area" },
+                    { key: "reviewReplies",     label: "Review Replies",        sub: "When someone replies to your review" },
+                    { key: "weeklyNewsletter",  label: "Weekly Newsletter",     sub: "Weekly digest of temple news" },
+                  ].map((item) => (
+                    <div key={item.key} className="profile-settings__toggle-row">
                       <div>
                         <p className="profile-settings__toggle-label">{item.label}</p>
                         <p className="profile-settings__toggle-sub">{item.sub}</p>
                       </div>
                       <label className="profile-settings__toggle">
-                        <input type="checkbox" defaultChecked={i < 2} />
+                        <input
+                          type="checkbox"
+                          checked={!!notifSettings[item.key]}
+                          onChange={() => handleToggleNotif(item.key)}
+                        />
                         <span className="profile-settings__toggle-slider" />
                       </label>
                     </div>
@@ -357,16 +547,20 @@ export default function Profile() {
                 <div className="profile-settings__section">
                   <h4>🔒 Privacy</h4>
                   {[
-                    { label: "Show my favorites publicly",  sub: "Others can see your saved temples" },
-                    { label: "Show my reviews publicly",    sub: "Your reviews are visible to all"   },
-                  ].map((item, i) => (
-                    <div key={i} className="profile-settings__toggle-row">
+                    { key: "showFavoritesPublicly", label: "Show my favorites publicly",  sub: "Others can see your saved temples" },
+                    { key: "showReviewsPublicly",   label: "Show my reviews publicly",    sub: "Your reviews are visible to all"   },
+                  ].map((item) => (
+                    <div key={item.key} className="profile-settings__toggle-row">
                       <div>
                         <p className="profile-settings__toggle-label">{item.label}</p>
                         <p className="profile-settings__toggle-sub">{item.sub}</p>
                       </div>
                       <label className="profile-settings__toggle">
-                        <input type="checkbox" defaultChecked />
+                        <input
+                          type="checkbox"
+                          checked={!!privacySettings[item.key]}
+                          onChange={() => handleTogglePrivacy(item.key)}
+                        />
                         <span className="profile-settings__toggle-slider" />
                       </label>
                     </div>
@@ -376,9 +570,34 @@ export default function Profile() {
                 {/* Danger Zone */}
                 <div className="profile-settings__section profile-settings__danger">
                   <h4>⚠️ Danger Zone</h4>
-                  <button className="profile-settings__delete-btn">
-                    Delete My Account
-                  </button>
+                  {!showDeleteConfirm ? (
+                    <button
+                      className="profile-settings__delete-btn"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      Delete My Account
+                    </button>
+                  ) : (
+                    <div className="profile-settings__delete-confirm">
+                      <p>Are you sure? This will permanently delete your account, favorites and reviews. This cannot be undone.</p>
+                      <div className="profile-settings__delete-confirm-btns">
+                        <button
+                          className="profile-settings__delete-btn"
+                          onClick={handleDeleteAccount}
+                          disabled={deleting}
+                        >
+                          {deleting ? "Deleting..." : "Yes, Delete Permanently"}
+                        </button>
+                        <button
+                          className="profile-card__edit-btn"
+                          onClick={() => setShowDeleteConfirm(false)}
+                          disabled={deleting}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -402,53 +621,79 @@ export default function Profile() {
                 {/* Change Password */}
                 <div className="profile-security__section">
                   <h4>🔑 Change Password</h4>
+
+                  {pwError   && <div className="profile-card__error">⚠️ {pwError}</div>}
+                  {pwSuccess && <div className="profile-card__success">✅ {pwSuccess}</div>}
+
                   <div className="profile-form__field">
                     <label>Current Password</label>
-                    <input type="password" placeholder="Enter current password"/>
+                    <input
+                      type="password"
+                      placeholder="Enter current password"
+                      value={pwForm.current}
+                      onChange={(e) => setPwForm((p) => ({ ...p, current: e.target.value }))}
+                    />
                   </div>
                   <div className="profile-form__field">
                     <label>New Password</label>
-                    <input type="password" placeholder="Enter new password" />
+                    <input
+                      type="password"
+                      placeholder="Enter new password"
+                      value={pwForm.next}
+                      onChange={(e) => setPwForm((p) => ({ ...p, next: e.target.value }))}
+                    />
                   </div>
                   <div className="profile-form__field">
                     <label>Confirm New Password</label>
-                    <input type="password" placeholder="Confirm new password" />
+                    <input
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={pwForm.confirm}
+                      onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))}
+                    />
                   </div>
-                  <button className="profile-security__save-btn">
-                    Update Password
+                  <button
+                    className="profile-security__save-btn"
+                    onClick={handleChangePassword}
+                    disabled={pwSaving}
+                  >
+                    {pwSaving ? "Updating..." : "Update Password"}
                   </button>
                 </div>
 
-                {/* Login Activity */}
+                {/* My Reviews — replaces fake login activity with real data */}
                 <div className="profile-security__section">
-                  <h4>📱 Recent Login Activity</h4>
-                  {[
-                    { device: "Chrome on Windows",  location: "Ujjain, India", time: "Today, 10:30 AM",    current: true  },
-                    { device: "Safari on iPhone",   location: "Indore, India", time: "Yesterday, 8:15 PM", current: false },
-                    { device: "Firefox on Windows", location: "Bhopal, India", time: "May 28, 2:00 PM",    current: false },
-                  ].map((item, i) => (
-                    <div key={i} className="profile-security__activity">
-                      <div className="profile-security__activity-icon">
-                        {item.current ? "💻" : "📱"}
+                  <h4>⭐ My Reviews</h4>
+
+                  {reviewsLoading ? (
+                    <p className="profile-empty-note">Loading...</p>
+                  ) : myReviews.length === 0 ? (
+                    <p className="profile-empty-note">You haven't written any reviews yet.</p>
+                  ) : (
+                    myReviews.map((r) => (
+                      <div key={r._id} className="profile-security__activity">
+                        <div className="profile-security__activity-icon">
+                          <FiStar size={18} style={{ color: "#f59e0b" }} />
+                        </div>
+                        <div className="profile-security__activity-info">
+                          <p className="profile-security__activity-device">
+                            {r.temple?.name || "Temple"}
+                            <span className="profile-security__activity-current">
+                              {r.rating}★
+                            </span>
+                          </p>
+                          <p className="profile-security__activity-meta">
+                            {r.comment?.slice(0, 60)}{r.comment?.length > 60 ? "..." : ""}
+                          </p>
+                        </div>
+                        {r.temple?.slug && (
+                          <Link to={`/temples/${r.temple.slug}`} className="profile-security__activity-revoke">
+                            View
+                          </Link>
+                        )}
                       </div>
-                      <div className="profile-security__activity-info">
-                        <p className="profile-security__activity-device">
-                          {item.device}
-                          {item.current && (
-                            <span className="profile-security__activity-current">Current</span>
-                          )}
-                        </p>
-                        <p className="profile-security__activity-meta">
-                          {item.location} • {item.time}
-                        </p>
-                      </div>
-                      {!item.current && (
-                        <button className="profile-security__activity-revoke">
-                          Revoke
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
               </div>

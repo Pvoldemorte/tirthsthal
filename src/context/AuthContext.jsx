@@ -4,6 +4,7 @@ import {
   register as registerService,
   logout as logoutService,
   getCurrentUser,
+  getProfile as getProfileService,
   isAuthenticated,
 } from "../services/authServices";
 
@@ -55,6 +56,19 @@ export const AuthProvider = ({ children }) => {
 
   const clearError = () => setError(null);
 
+  // ── Backend se latest profile fetch karke user state refresh karo ──
+  const refreshUser = async () => {
+    try {
+      const freshUser = await getProfileService();
+      setUser(freshUser);
+      localStorage.setItem("tirthstal_user", JSON.stringify(freshUser));
+      return freshUser;
+    } catch (err) {
+      console.error("Failed to refresh user:", err);
+      return null;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -67,6 +81,7 @@ export const AuthProvider = ({ children }) => {
       register,
       logout,
       clearError,
+      refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

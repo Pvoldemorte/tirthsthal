@@ -25,6 +25,24 @@ export const toggleFavorite = async (templeId) => {
   return data; // { message, favorites }
 };
 
+// ── My favorite temples (fully populated) ──
+export const getMyFavoriteTemples = async () => {
+  const { data } = await API.get("/temples/my/favorites");
+  return data.temples;
+};
+
+// ── Mark a temple as visited ──
+export const markTempleVisited = async (templeId) => {
+  const { data } = await API.post(`/temples/${templeId}/visit`);
+  return data;
+};
+
+// ── My visited temples (fully populated) ──
+export const getMyVisitedTemples = async () => {
+  const { data } = await API.get("/temples/my/visited");
+  return data.temples;
+};
+
 // ── Admin: Temple create ──
 export const createTemple = async (templeData) => {
   const { data } = await API.post("/temples/api/login", templeData);
