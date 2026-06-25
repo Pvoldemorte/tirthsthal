@@ -1,79 +1,143 @@
 .deity {
-  padding: 40px 60px;
-  background: #fff;
-  border-bottom: 1px solid #f0ede8;
+  padding: 56px 60px;
+  background: #FDF6EE;
+  border-bottom: 1px solid #EDE0CF;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Header */
+.deity::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, #D4A96A22 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+
 .deity__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 36px;
+  position: relative;
 }
 
 .deity__title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-size: 22px;
+  font-weight: 800;
+  color: #2B2420;
+  letter-spacing: -0.01em;
 }
+
+.deity__title-accent { color: #E8742C; }
 
 .deity__view-all {
   display: flex;
   align-items: center;
   gap: 6px;
   background: none;
-  border: none;
-  color: #c8610a;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: 'Poppins', sans-serif;
+  border: 1.5px solid #E8742C;
+  color: #E8742C;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
-  transition: gap 0.2s;
+  padding: 7px 16px;
+  border-radius: 99px;
+  transition: all 0.2s;
 }
-.deity__view-all:hover { gap: 10px; }
+.deity__view-all:hover {
+  background: #E8742C;
+  color: #fff;
+  gap: 10px;
+}
 
-/* Grid */
 .deity__grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(10, 1fr);
   gap: 16px;
+  position: relative;
 }
 
-/* Card */
 .deity__card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 20px 12px;
-  border: 1px solid #f0ede8;
-  border-radius: 12px;
+  gap: 12px;
+  padding: 20px 10px 16px;
+  border-radius: 18px;
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.deity__card:hover {
-  border-color: #fdf9ff;
-  box-shadow: 0 4px 16px rgba(200, 97, 10, 0.1);
+  background: #fff;
+  border: 1px solid #EDE0CF;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  position: relative;
 }
 
-/* Image circle */
-.deity__icon-wrap {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: 2.5px solid #f0ede8;
-  overflow: hidden;
+.deity__card:hover {
+  transform: translateY(-6px);
+  border-color: transparent;
+  box-shadow:
+    0 12px 32px rgba(0,0,0,0.08),
+    0 0 0 1px rgba(232,116,44,0.15);
+}
+
+.deity__card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 40%, var(--deity-color, #E8742C) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.deity__card:hover::before { opacity: 0.08; }
+
+.deity__halo {
+  position: relative;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff6f0;
-  transition: border-color 0.2s, box-shadow 0.2s;
   flex-shrink: 0;
 }
 
-.deity__card:hover .deity__icon-wrap {
-  box-shadow: 0 0 0 4px rgba(200, 97, 10, 0.12);
+.deity__halo::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid var(--deity-color, #E8742C);
+  opacity: 0.3;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.deity__card:hover .deity__halo::before {
+  opacity: 0.7;
+  transform: scale(1.06);
+}
+
+.deity__halo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid var(--deity-color, #E8742C);
+  transition: box-shadow 0.3s;
+}
+.deity__card:hover .deity__halo::after {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--deity-color, #E8742C) 20%, transparent);
+}
+
+.deity__img-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #FFF5EC;
+  position: relative;
+  z-index: 1;
 }
 
 .deity__img {
@@ -81,54 +145,52 @@
   height: 100%;
   object-fit: cover;
   object-position: top center;
-  border-radius: 50%;
-  transition: transform 0.35s ease;
   display: block;
+  transition: transform 0.4s ease;
 }
+.deity__card:hover .deity__img { transform: scale(1.1); }
 
-.deity__card:hover .deity__img {
-  transform: scale(1.08);
-}
-
-/* "More" fallback */
-.deity__more-icon {
-  font-size: 28px;
-  font-weight: 300;
-  color: #9ca3af;
-  line-height: 1;
-}
-
-/* Fallback when image fails */
-.deity__icon-wrap--fallback::after {
-  content: attr(data-fallback);
+.deity__fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFF5EC;
   font-size: 26px;
+  color: #9ca3af;
 }
 
-/* Name */
 .deity__name {
   font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 700;
+  color: #2B2420;
   text-align: center;
+  line-height: 1.3;
+  transition: color 0.2s;
+}
+.deity__card:hover .deity__name { color: #E8742C; }
+
+@media (max-width: 1024px) {
+  .deity { padding: 40px 32px; }
+  .deity__grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
-  .deity { padding: 24px 16px; }
-  .deity__grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-  }
-  .deity__card { padding: 14px 8px; gap: 8px; }
-  .deity__icon-wrap { width: 56px; height: 56px; }
+  .deity { padding: 32px 16px; }
+  .deity__grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .deity__card { padding: 16px 8px 12px; gap: 10px; }
+  .deity__halo { width: 64px; height: 64px; }
+  .deity__img-circle { width: 64px; height: 64px; }
   .deity__name { font-size: 12px; }
 }
 
-@media (max-width: 380px) {
-  .deity__grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  .deity__icon-wrap { width: 48px; height: 48px; }
-  .deity__name { font-size: 11px; }
+@media (max-width: 400px) {
+  .deity__grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .deity__halo { width: 56px; height: 56px; }
+  .deity__img-circle { width: 56px; height: 56px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deity__card, .deity__img, .deity__halo::before { transition: none; }
 }

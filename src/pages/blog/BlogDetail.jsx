@@ -29,6 +29,37 @@ function formatDate(dateStr) {
   });
 }
 
+// Spread gallery images evenly between paragraphs, e.g. 3 images across
+// 9 paragraphs -> after paragraph 3, 6, 9 (never right before the very first one).
+function buildContentBlocks(paragraphs, images = []) {
+  const blocks = [];
+  if (paragraphs.length === 0) {
+    images.forEach((src, i) => blocks.push({ type: "image", src, key: `img-${i}` }));
+    return blocks;
+  }
+
+  const step = Math.max(1, Math.ceil(paragraphs.length / (images.length + 1)));
+  let imgIdx = 0;
+
+  paragraphs.forEach((p, i) => {
+    blocks.push({ type: "text", text: p, key: `p-${i}` });
+    const isStep = (i + 1) % step === 0;
+    const isLast = i === paragraphs.length - 1;
+    if (imgIdx < images.length && (isStep || isLast)) {
+      blocks.push({ type: "image", src: images[imgIdx], key: `img-${imgIdx}` });
+      imgIdx++;
+    }
+  });
+
+  // Any leftover images (more images than slots) go at the end
+  while (imgIdx < images.length) {
+    blocks.push({ type: "image", src: images[imgIdx], key: `img-${imgIdx}` });
+    imgIdx++;
+  }
+
+  return blocks;
+}
+
 export default function BlogDetail() {
   const { slug } = useParams();
   const [blog,    setBlog]    = useState(null);
@@ -67,6 +98,7 @@ export default function BlogDetail() {
   const categoryColor = categoryColors[blog.category] || "#c8610a";
   // Backend stores the article body as plain text -> split into paragraphs
   const paragraphs = (blog.content || "").split(/\n+/).filter((p) => p.trim());
+  const contentBlocks = buildContentBlocks(paragraphs, blog.images || []);
 
   return (
     <div className="blog-detail">
@@ -144,12 +176,22 @@ export default function BlogDetail() {
 
           <div className="blog-detail__section">
             <div className="blog-detail__section-body">
-              {paragraphs.length > 0 ? (
-                paragraphs.map((p, i) => (
-                  <p key={i} className="blog-detail__section-text" style={{ marginBottom: 16 }}>
-                    {p}
-                  </p>
-                ))
+              {contentBlocks.length > 0 ? (
+                contentBlocks.map((block) =>
+                  block.type === "text" ? (
+                    <p key={block.key} className="blog-detail__section-text" style={{ marginBottom: 16 }}>
+                      {block.text}
+                    </p>
+                  ) : (
+                    <img
+                      key={block.key}
+                      src={block.src}
+                      alt={blog.title}
+                      className="blog-detail__inline-img"
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  )
+                )
               ) : (
                 <p className="blog-detail__section-text">No content available for this article.</p>
               )}
